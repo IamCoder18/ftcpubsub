@@ -62,7 +62,7 @@ publishing {
             name = 'GitHubPackages'
             url = 'https://maven.pkg.github.com/IamCoder18/ftcpubsub'
             credentials {
-                username = project.findProperty('gpr.user') ?: System.getenv('GITHUB_ACTOR')
+                username = project.findProperty('gpr.user') ?: System.getenv('GITHUB_USER') ?: System.getenv('GITHUB_ACTOR')
                 password = project.findProperty('gpr.key') ?: System.getenv('GITHUB_TOKEN')
             }
         }
