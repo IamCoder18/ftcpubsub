@@ -1,6 +1,6 @@
 jdk:
-  - openjdk11
+  - openjdk17
 before_install:
-  - echo "Preparing to build aaravlabs/pubsub"
+  - echo "Building aaravlabs/pubsub"
 install:
   - ./gradlew publishToMavenLocal -x test --no-daemon
