@@ -4,3 +4,4 @@ before_install:
   - echo "Building aaravlabs/pubsub"
 install:
   - ./gradlew publishToMavenLocal -x test --no-daemon
+
