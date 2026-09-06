@@ -36,20 +36,20 @@ publishing {
             pom {
                 name = 'AaravLabs PubSub'
                 description = 'Annotation-driven pub/sub bus for FTC robot code with hardware-thread safety.'
-                url = 'https://github.com/aaravlabs/ftcpubsub'
+                url = 'https://github.com/IamCoder18/ftcpubsub'
                 licenses {
                     license {
                         name = 'MIT'
                     }
                 }
                 scm {
-                    url = 'https://github.com/aaravlabs/ftcpubsub'
-                    connection = 'scm:git:git://github.com/aaravlabs/ftcpubsub.git'
-                    developerConnection = 'scm:git:ssh://git@github.com/aaravlabs/ftcpubsub.git'
+                    url = 'https://github.com/IamCoder18/ftcpubsub'
+                    connection = 'scm:git:git://github.com/IamCoder18/ftcpubsub.git'
+                    developerConnection = 'scm:git:ssh://git@github.com/IamCoder18/ftcpubsub.git'
                 }
                 developers {
                     developer {
-                        id = 'aaravlabs'
+                        id = 'IamCoder18'
                         name = 'AaravLabs'
                     }
                 }
@@ -60,7 +60,7 @@ publishing {
         mavenLocal()
         maven {
             name = 'GitHubPackages'
-            url = 'https://maven.pkg.github.com/aaravlabs/ftcpubsub'
+            url = 'https://maven.pkg.github.com/IamCoder18/ftcpubsub'
             credentials {
                 username = project.findProperty('gpr.user') ?: System.getenv('GITHUB_ACTOR')
                 password = project.findProperty('gpr.key') ?: System.getenv('GITHUB_TOKEN')
