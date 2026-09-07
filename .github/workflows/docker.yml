@@ -10,7 +10,10 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/synapse-website
+  # github.repository_owner is the lowercased owner login, which GHCR treats
+  # as the canonical package name (GitHub itself lowercases for the registry
+  # path even when the org/repo display name preserves case).
+  IMAGE_NAME: ${{ github.repository_owner }}/synapse-website
 
 jobs:
   build:
@@ -82,9 +85,9 @@ jobs:
       - name: Build
         uses: docker/bake-action@v5
         with:
-        source: website
-        files: |
-          website/docker-bake.hcl
-        targets: synapse-website
-        push: false
-        cache-from: type=gha
+          source: website
+          files: |
+            website/docker-bake.hcl
+          targets: synapse-website
+          push: false
+          cache-from: type=gha

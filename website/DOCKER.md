@@ -57,4 +57,4 @@ docker buildx bake synapse-website --push \
 
 ## Source
 
-See [`website/Dockerfile`](./website/Dockerfile), [`website/nginx.conf`](./website/nginx.conf), and [`website/docker-bake.hcl`](./website/docker-bake.hcl).
+See [`Dockerfile`](./Dockerfile), [`nginx.conf`](./nginx.conf), and [`docker-bake.hcl`](./docker-bake.hcl).
