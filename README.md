@@ -304,7 +304,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.aaravlabs:synapse:0.3.0'
+    implementation 'com.aaravlabs:synapse:0.3.1'
     // ... your other FTC deps
 }
 ```
@@ -366,3 +366,7 @@ conduct, and [CHANGELOG.md](./CHANGELOG.md) for the version history.
 ## License
 
 [MIT](./LICENSE)
+
+## Credits
+
+Created and maintained by [IamCoder18](https://github.com/IamCoder18).

@@ -3,6 +3,10 @@
 Thanks for your interest in contributing to Synapse! This document
 covers how to set up the project locally, run the test suite, and submit changes.
 
+**Maintainer:** [IamCoder18](https://github.com/IamCoder18) — open an issue or
+PR on this repo for any project-related questions, and the maintainer will
+follow up.
+
 ## Code of conduct
 
 By participating, you agree to keep things respectful and constructive. We're

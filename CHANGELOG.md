@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-09-07
+
+### Changed
+
+- **Published metadata refresh.** POM `name` corrected to `Synapse` (was
+  `AaravLabs Synapse`) and `developer` block now lists `IamCoder18` (was
+  `AaravLabs` / `IamCoder18`). LICENSE copyright updated to
+  `Copyright (c) 2026 IamCoder18`. No code changes; rebuild picks up the
+  fresh metadata.
+- **Prose cleanup.** Brand-name mentions removed from the Javadoc on
+  `SafeOpMode`, the `CONTRIBUTING` intro, the `SECURITY` policy display
+  text, and the `README` license footer. Sample placeholders in
+  `gradle.properties`, `CONTRIBUTING.md`, and the README install snippet
+  now use `<your-github-username>` instead of a hardcoded value.
+- **Author credit.** Added a "Credits" section to the README and a
+  "Maintainer" note at the top of `CONTRIBUTING.md`, both pointing at
+  the project's owner.
+
 ## [0.3.0] - 2026-09-07
 
 ### Changed
@@ -57,7 +75,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   loops, two-pool isolation, hardware-thread serial execution, soak tests,
   race conditions, and the real-FTC-SDK `Gamepad` field set.
 
-[Unreleased]: https://github.com/IamCoder18/synapse/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/IamCoder18/synapse/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/IamCoder18/synapse/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/IamCoder18/synapse/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/IamCoder18/synapse/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/IamCoder18/synapse/releases/tag/v0.2.0
