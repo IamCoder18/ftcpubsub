@@ -10,17 +10,20 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  # github.repository_owner is the lowercased owner login, which GHCR treats
-  # as the canonical package name (GitHub itself lowercases for the registry
-  # path even when the org/repo display name preserves case).
+  # github.repository_owner preserves the owner's display case (e.g.
+  # `IamCoder18`). GHCR resolves package lookups case-insensitively at the
+  # storage layer, so `ghcr.io/IamCoder18/synapse-website` and
+  # `ghcr.io/iamcoder18/synapse-website` point at the same package — we use
+  # the lowercase spelling in the docker-compose files purely for
+  # readability.
   IMAGE_NAME: ${{ github.repository_owner }}/synapse-website
 
 jobs:
   build:
     name: Build & push image
     runs-on: ubuntu-latest
-    # Skip on PRs from forks (no GHCR write access) and on this repo's PRs
-    # where we still want to verify the build succeeds without pushing.
+    # Publish only on direct pushes to main or on v* tags. PRs run the
+    # build-pr job (push: false) below.
     if: github.event_name != 'pull_request'
     permissions:
       contents: read
@@ -46,28 +49,27 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=branch
-            type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha,format=short
             type=raw,value=latest,enable={{is_default_branch}}
           bake-target: synapse-website
-          flavor: |
-            latest=auto
 
-      - name: Build (and push)
+      - name: Build and push
         uses: docker/bake-action@v5
         with:
+          # `source` is the build context that the bake target's
+          # context="." resolves to. Bake definition file paths are
+          # resolved relative to this directory, so `docker-bake.hcl`
+          # (not `website/docker-bake.hcl`).
           source: website
           files: |
-            website/docker-bake.hcl
+            docker-bake.hcl
             ${{ steps.meta.outputs.bake-file }}
           targets: synapse-website
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
   build-pr:
     name: Build (PR only)
@@ -87,7 +89,6 @@ jobs:
         with:
           source: website
           files: |
-            website/docker-bake.hcl
+            docker-bake.hcl
           targets: synapse-website
           push: false
-          cache-from: type=gha
