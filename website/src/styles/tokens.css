@@ -1,0 +1,70 @@
+/*
+ * Synapse brand tokens. CSS custom properties override Fumadocs defaults via
+ * `global.css`. Use these throughout the site instead of hard-coded hex values.
+ */
+
+:root,
+:root[data-theme='dark'] {
+  --signal: #0e7c7b;
+  --signal-bright: #1fbfb6;
+  --lime: #b6ff3c;
+  --surface-0: #0a0f14;
+  --surface-1: #11181f;
+  --surface-2: #18222a;
+  --surface-3: #1e2a33;
+  --text: #e6f1ee;
+  --text-muted: #7a8a86;
+  --border: #1e2a33;
+  --code-bg: #0d151b;
+  --selection-bg: #0e7c7b44;
+
+  /* Fumadocs neutral.css variable mappings */
+  --fd-background: var(--surface-0);
+  --fd-foreground: var(--text);
+  --fd-muted: var(--text-muted);
+  --fd-muted-foreground: var(--text-muted);
+  --fd-card: var(--surface-1);
+  --fd-card-foreground: var(--text);
+  --fd-popover: var(--surface-2);
+  --fd-popover-foreground: var(--text);
+  --fd-border: var(--border);
+  --fd-input: var(--border);
+  --fd-primary: var(--signal);
+  --fd-primary-foreground: var(--text);
+  --fd-accent: var(--lime);
+  --fd-accent-foreground: #0a1417;
+  --fd-ring: var(--signal-bright);
+  --fd-radius: 8px;
+}
+
+:root[data-theme='light'] {
+  --signal: #0e7c7b;
+  --signal-bright: #1fbfb6;
+  --lime: #6ea800;
+  --surface-0: #f7faf9;
+  --surface-1: #ffffff;
+  --surface-2: #eef4f2;
+  --surface-3: #dfe9e6;
+  --text: #0a1417;
+  --text-muted: #4d5b58;
+  --border: #d3dcd9;
+  --code-bg: #f0f5f3;
+  --selection-bg: #0e7c7b22;
+
+  --fd-background: var(--surface-0);
+  --fd-foreground: var(--text);
+  --fd-muted: var(--surface-2);
+  --fd-muted-foreground: var(--text-muted);
+  --fd-card: var(--surface-1);
+  --fd-card-foreground: var(--text);
+  --fd-popover: var(--surface-1);
+  --fd-popover-foreground: var(--text);
+  --fd-border: var(--border);
+  --fd-input: var(--border);
+  --fd-primary: var(--signal);
+  --fd-primary-foreground: #ffffff;
+  --fd-accent: var(--lime);
+  --fd-accent-foreground: #0a1417;
+  --fd-ring: var(--signal-bright);
+  --fd-radius: 8px;
+}

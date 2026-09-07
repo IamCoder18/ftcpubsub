@@ -1,0 +1,85 @@
+---
+const year = new Date().getFullYear();
+---
+<footer class="syn-foot">
+  <div class="syn-foot__cols">
+    <div>
+      <h4>Synapse</h4>
+      <p class="syn-foot__muted">A tiny, annotation-driven pub/sub bus for FTC.</p>
+    </div>
+    <div>
+      <h4>Project</h4>
+      <ul role="list">
+        <li><a href="/docs">Docs</a></li>
+        <li><a href="/install">Install</a></li>
+        <li><a href="/changelog">Changelog</a></li>
+        <li><a href="/community">Community</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Source</h4>
+      <ul role="list">
+        <li><a href="https://github.com/IamCoder18/synapse" rel="noopener">Repository</a></li>
+        <li><a href="https://github.com/IamCoder18/synapse/blob/main/LICENSE" rel="noopener">MIT License</a></li>
+        <li><a href="https://github.com/IamCoder18/synapse/blob/main/CONTRIBUTING.md" rel="noopener">Contributing</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>For LLMs</h4>
+      <ul role="list">
+        <li><a href="/llms.txt">llms.txt</a></li>
+        <li><a href="/llms-full.txt">llms-full.txt</a></li>
+        <li><a href="/docs.md">docs.md</a></li>
+      </ul>
+    </div>
+  </div>
+  <p class="syn-foot__bottom">© {year} IamCoder18. Released under the MIT License.</p>
+</footer>
+
+<style>
+  .syn-foot {
+    margin-top: 5rem;
+    border-top: 1px solid var(--border);
+    background: var(--surface-1);
+    padding: 3rem 1.5rem 2rem;
+  }
+  .syn-foot__cols {
+    display: grid;
+    gap: 2rem;
+    grid-template-columns: 1.4fr 1fr 1fr 1fr;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .syn-foot h4 {
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    margin: 0 0 0.7rem;
+    color: var(--text);
+  }
+  .syn-foot ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+  .syn-foot a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.92rem;
+  }
+  .syn-foot a:hover { color: var(--lime); }
+  .syn-foot__muted { color: var(--text-muted); font-size: 0.9rem; max-width: 30ch; }
+  .syn-foot__bottom {
+    max-width: 1100px;
+    margin: 2.5rem auto 0;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    border-top: 1px solid var(--border);
+    padding-top: 1.2rem;
+  }
+  @media (max-width: 800px) {
+    .syn-foot__cols { grid-template-columns: 1fr 1fr; }
+  }
+</style>

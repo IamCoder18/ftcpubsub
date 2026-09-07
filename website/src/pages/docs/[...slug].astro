@@ -1,0 +1,205 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '~/components/layout/BaseLayout.astro';
+import Nav from '~/components/layout/Nav.astro';
+import Footer from '~/components/layout/Footer.astro';
+import { docsUrlFromId } from '~/lib/source';
+
+export async function getStaticPaths() {
+  const all = await getCollection('docs');
+  return all
+    .map((entry) => {
+      const url = docsUrlFromId(entry.id);
+      if (!url) return null;
+      const slug = url.replace(/^\/docs\//, '').replace(/\/$/, '');
+      return {
+        params: { slug },
+        props: { entry, all },
+      };
+    })
+    .filter((x): x is { params: { slug: string }; props: { entry: any; all: any } } => x !== null);
+}
+
+const { entry, all } = Astro.props;
+const { Content } = await entry.render();
+const title = entry.data.title ?? entry.id;
+const description = entry.data.description;
+const url = docsUrlFromId(entry.id);
+const slug = url ? url.replace(/^\/docs\//, '') : '';
+
+const groups: Record<string, any[]> = {};
+for (const s of all) {
+  const top = docsUrlFromId(s.id)?.split('/')[2] ?? '';
+  if (!top) continue;
+  groups[top] ??= [];
+  groups[top].push(s);
+}
+const groupTitles: Record<string, string> = {
+  'get-started': 'Get Started',
+  concepts: 'Concepts',
+  annotations: 'Annotations',
+  ftc: 'FTC Integration',
+  recipes: 'Recipes',
+  api: 'API Reference',
+};
+---
+<BaseLayout
+  title={title}
+  description={description}
+  jsonLd={{
+    '@context': 'https://schema.org',
+    '@type': 'TechArticle',
+    headline: title,
+    description: description ?? '',
+    url: new URL(`/docs/${slug}`, Astro.site ?? Astro.url).toString(),
+    author: { '@type': 'Person', name: 'IamCoder18', url: 'https://github.com/IamCoder18' },
+    publisher: { '@type': 'Organization', name: 'Synapse', url: 'https://synapse.i-am-coder.dev' },
+    isPartOf: { '@type': 'WebSite', name: 'Synapse', url: 'https://synapse.i-am-coder.dev' },
+  }}
+>
+  <Nav />
+  <main class="docs-shell">
+    <aside class="docs-side" aria-label="Docs navigation">
+      <a class="docs-side__back" href="/docs">← All docs</a>
+      {Object.entries(groups).map(([g, items]) => (
+        <section class="docs-side__group">
+          <h3>{groupTitles[g] ?? g}</h3>
+          <ul role="list">
+            {items.map((i) => {
+              const itemUrl = docsUrlFromId(i.id);
+              if (!itemUrl) return null;
+              const itemSlug = itemUrl.replace(/^\/docs\//, '');
+              const isActive = itemSlug === slug;
+              return (
+                <li>
+                  <a
+                    href={itemUrl}
+                    aria-current={isActive ? 'page' : undefined}
+                    class={isActive ? 'is-active' : ''}
+                  >
+                    {i.data.title ?? i.id}
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
+    </aside>
+    <article class="docs-article">
+      <Content />
+      <hr />
+      <p class="docs-edit">
+        <a href={`https://github.com/IamCoder18/synapse/edit/main/website/src/content/docs/${entry.id}`} rel="noopener">
+          Edit this page on GitHub →
+        </a>
+      </p>
+    </article>
+  </main>
+  <Footer />
+
+  <style>
+    .docs-shell {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: 3rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+    .docs-side {
+      position: sticky;
+      top: 72px;
+      align-self: start;
+      max-height: calc(100vh - 80px);
+      overflow: auto;
+    }
+    .docs-side__back {
+      display: inline-block;
+      margin-bottom: 1rem;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      text-decoration: none;
+    }
+    .docs-side__group h3 {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin: 1.3rem 0 0.4rem;
+    }
+    .docs-side__group ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+    .docs-side__group a {
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 0.25rem 0.4rem;
+      border-radius: 6px;
+      display: block;
+      font-size: 0.92rem;
+    }
+    .docs-side__group a:hover { color: var(--text); background: var(--surface-1); }
+    .docs-side__group a.is-active {
+      color: var(--lime);
+      background: var(--surface-1);
+    }
+    .docs-article {
+      max-width: 760px;
+      min-width: 0;
+    }
+    .docs-article :global(h1) {
+      font-size: 2.4rem;
+      margin-top: 0;
+    }
+    .docs-article :global(h2) {
+      margin-top: 2.5rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.4rem;
+    }
+    .docs-article :global(p) { line-height: 1.7; }
+    .docs-article :global(code) {
+      background: var(--code-bg);
+      padding: 0.15em 0.4em;
+      border-radius: 4px;
+      font-size: 0.92em;
+    }
+    .docs-article :global(pre) {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      padding: 1rem;
+      border-radius: 8px;
+      overflow: auto;
+    }
+    .docs-article :global(pre code) { background: transparent; padding: 0; }
+    .docs-article :global(blockquote) {
+      border-left: 3px solid var(--signal);
+      margin: 1.2rem 0;
+      padding: 0.4rem 1rem;
+      color: var(--text-muted);
+      background: var(--surface-1);
+      border-radius: 0 8px 8px 0;
+    }
+    .docs-article :global(table) {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 1.2rem 0;
+    }
+    .docs-article :global(th), .docs-article :global(td) {
+      border: 1px solid var(--border);
+      padding: 0.55rem 0.7rem;
+      text-align: left;
+    }
+    .docs-article :global(th) { background: var(--surface-1); }
+    .docs-edit { color: var(--text-muted); font-size: 0.9rem; }
+    @media (max-width: 900px) {
+      .docs-shell { grid-template-columns: 1fr; }
+      .docs-side { position: static; max-height: none; }
+    }
+  </style>
+</BaseLayout>

@@ -1,0 +1,53 @@
+---
+title: First OpMode
+description: A complete, copy-pasteable TeleOp that drives a single motor.
+---
+
+# First OpMode
+
+```java
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.aaravlabs.synapse.Node;
+import com.aaravlabs.synapse.Orchestrator;
+import com.aaravlabs.synapse.annotation.RunPeriodically;
+import com.aaravlabs.synapse.ftc.GamepadAdaptor;
+import com.aaravlabs.synapse.ftc.SafeDevice;
+import com.aaravlabs.synapse.ftc.SafeOpMode;
+
+@TeleOp(name = "SynapseFirst", group = "Test")
+public class SynapseFirst extends SafeOpMode {
+
+    @Override
+    protected void onSafeInit() {
+        SafeDevice<DcMotorEx> motor = safeMap.device(DcMotorEx.class, "motor");
+        orchestrator.registerNode("drive", new DriveNode(orchestrator, motor));
+        GamepadAdaptor.attach(orchestrator, gamepad1, "g1");
+    }
+
+    public static class DriveNode extends Node {
+        DriveNode(Orchestrator orch, SafeDevice<DcMotorEx> motor) {
+            super(orch);
+            this.motor = motor;
+        }
+        private final SafeDevice<DcMotorEx> motor;
+
+        @RunPeriodically(hz = 50, hardware = true)
+        public void drive() {
+            // GamepadAdaptor publishes axes as Float; map to double for setPower.
+            double y = -orchestrator.getLatestValue("g1/left_stick_y", Float.class)
+                                     .map(Float::doubleValue).orElse(0.0);
+            motor.run(m -> m.setPower(y));
+        }
+    }
+}
+```
+
+That's it. Push the left stick forward and the motor spins.
+
+## What's happening
+
+1. `safeMap.device(...)` returns a `SafeDevice<DcMotorEx>` — every method on it routes through the hardware thread (`SafeDevice.java:45-47`).
+2. `GamepadAdaptor.attach(...)` reflects `gamepad1`'s fields onto the `g1/...` topics (`GamepadAdaptor.java:94-99`).
+3. The `@RunPeriodically(hz = 50, hardware = true)` loop runs on the single hardware thread (`RunPeriodically.java:42-50`, `OrchestratorImpl.java:93-94`).
+4. `SafeOpMode.loop()` calls `hardware.assertNotHardwareThread()` on every tick (`SafeOpMode.java:62-66`) so a misconfigured loop fails fast.

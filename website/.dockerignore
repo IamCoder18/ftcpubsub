@@ -1,0 +1,10 @@
+node_modules
+.git
+.astro
+dist
+Dockerfile
+docker-compose.yaml
+README.md
+.env
+.env.local
+*.log

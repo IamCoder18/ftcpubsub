@@ -1,0 +1,93 @@
+---
+const features = [
+  {
+    icon: 'subscribed',
+    title: '@SubscribedTo',
+    body: 'Typed callbacks. Publish a Double, the parameter type is a Double. Mismatches are caught at first publish.',
+    file: 'src/main/java/com/aaravlabs/synapse/annotation/SubscribedTo.java',
+  },
+  {
+    icon: 'periodic',
+    title: '@RunPeriodically',
+    body: 'Fixed-rate loops with @RunPeriodically(hz=50). They never share a thread with your callbacks.',
+    file: 'src/main/java/com/aaravlabs/synapse/annotation/RunPeriodically.java',
+  },
+  {
+    icon: 'action',
+    title: '@RunnableAction',
+    body: 'Named commands fired on demand via orch.runAction("name"). Backed by an unbounded pool.',
+    file: 'src/main/java/com/aaravlabs/synapse/annotation/RunnableAction.java',
+  },
+  {
+    icon: 'hardware',
+    title: '@OnHardwareThread',
+    body: 'Reroute a subscriber onto the single dedicated hardware thread. No race conditions on the Lynx bus.',
+    file: 'src/main/java/com/aaravlabs/synapse/annotation/OnHardwareThread.java',
+  },
+  {
+    icon: 'safeopmode',
+    title: 'SafeOpMode',
+    body: 'Drop-in OpMode base class. Creates the orchestrator, wires the hardware thread, asserts you never run loop() on it.',
+    file: 'src/main/java/com/aaravlabs/synapse/ftc/SafeOpMode.java',
+  },
+  {
+    icon: 'gamepad',
+    title: 'GamepadAdaptor',
+    body: 'Reflects every Gamepad field onto topics in one call: GamepadAdaptor.attach(orch, gamepad1, "g1").',
+    file: 'src/main/java/com/aaravlabs/synapse/ftc/GamepadAdaptor.java',
+  },
+];
+
+const icons: Record<string, string> = {
+  subscribed: 'M5 12h14M5 12l4 4M5 12l4-4M19 12l-4-4M19 12l-4 4',
+  periodic: 'M3 12a9 9 0 1 0 3-6.7M3 4v5h5',
+  action: 'M13 2L3 14h7l-1 8 10-12h-7l1-8z',
+  hardware: 'M9 3v18M15 3v18M3 9h18M3 15h18',
+  safeopmode: 'M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z',
+  gamepad: 'M6 8h12a4 4 0 0 1 4 4v4a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4v-4a4 4 0 0 1 4-4zM8 14h.01M16 14h.01',
+};
+---
+<section class="feature-grid reveal">
+  <header>
+    <h2>Six primitives. One bus.</h2>
+    <p>No DSLs, no XML, no codegen. Four annotations, a base class, and a gamepad adaptor.</p>
+  </header>
+  <ul role="list" class="feature-grid__cards">
+    {features.map((f) => (
+      <li class="card">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d={icons[f.icon]} />
+        </svg>
+        <h3>{f.title}</h3>
+        <p>{f.body}</p>
+        <code>{f.file}</code>
+      </li>
+    ))}
+  </ul>
+</section>
+
+<style>
+  .feature-grid { padding: 5rem 1.5rem; max-width: 1200px; margin: 0 auto; }
+  .feature-grid header { text-align: center; margin-bottom: 2.5rem; }
+  .feature-grid h2 { font-size: clamp(1.8rem, 4vw, 2.6rem); margin: 0; }
+  .feature-grid header p { color: var(--text-muted); margin-top: 0.6rem; }
+  .feature-grid__cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.2rem;
+    transition: border-color 200ms;
+  }
+  .card:hover { border-color: var(--signal-bright); }
+  .card svg { color: var(--lime); margin-bottom: 0.6rem; }
+  .card h3 { margin: 0 0 0.3rem; font-size: 1.05rem; }
+  .card p { color: var(--text-muted); margin: 0; font-size: 0.93rem; line-height: 1.55; }
+  .card code { display: block; margin-top: 0.7rem; font-size: 0.75rem; color: var(--text-muted); word-break: break-all; }
+  @media (max-width: 900px) { .feature-grid__cards { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 600px) { .feature-grid__cards { grid-template-columns: 1fr; } }
+</style>

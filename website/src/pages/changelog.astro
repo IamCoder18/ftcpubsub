@@ -1,0 +1,56 @@
+---
+import BaseLayout from '~/components/layout/BaseLayout.astro';
+import Nav from '~/components/layout/Nav.astro';
+import Footer from '~/components/layout/Footer.astro';
+import { loadChangelog } from '~/lib/changelog';
+
+const releases = loadChangelog();
+---
+<BaseLayout
+  title="Changelog"
+  description="Every release of Synapse, in Keep-a-Changelog format."
+>
+  <Nav />
+  <main class="cl">
+    <header class="cl__head">
+      <h1>Changelog</h1>
+      <p>All notable changes to Synapse, following <a href="https://keepachangelog.com" rel="noopener">Keep a Changelog</a>.</p>
+    </header>
+    {releases.map((rel) => (
+      <article class={`cl__rel ${rel.isLatest ? 'cl__rel--latest' : ''}`}>
+        <header>
+          <h2>
+            {rel.isUnreleased ? 'Unreleased' : `v${rel.version}`}
+            {rel.isLatest && <span class="syn-pill syn-pill--accent">Latest</span>}
+          </h2>
+          {rel.date && <p class="cl__date">{rel.date}</p>}
+        </header>
+        {rel.sections.map((s) => (
+          <section>
+            <h3>{s.type[0].toUpperCase()}{s.type.slice(1)}</h3>
+            <ul role="list">
+              {s.bullets.map((b) => <li>{b}</li>)}
+            </ul>
+          </section>
+        ))}
+      </article>
+    ))}
+  </main>
+  <Footer />
+</BaseLayout>
+
+<style>
+  .cl { max-width: 820px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+  .cl__head { text-align: center; margin-bottom: 3rem; }
+  .cl__head h1 { font-size: clamp(2.4rem, 6vw, 3.4rem); margin: 0; }
+  .cl__head p { color: var(--text-muted); margin-top: 0.6rem; }
+  .cl__rel { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem 1.8rem; margin-bottom: 1.5rem; }
+  .cl__rel--latest { border-color: var(--signal-bright); }
+  .cl__rel header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 0.6rem; }
+  .cl__rel h2 { font-size: 1.5rem; margin: 0; }
+  .cl__date { color: var(--text-muted); margin: 0; font-family: var(--font-mono); font-size: 0.85rem; }
+  .cl__rel h3 { font-size: 1rem; margin-top: 1.2rem; text-transform: capitalize; color: var(--signal-bright); font-family: var(--font-display); }
+  .cl__rel ul { padding-left: 1.2rem; }
+  .cl__rel li { line-height: 1.6; color: var(--text-muted); }
+  .cl__rel li strong { color: var(--text); }
+</style>

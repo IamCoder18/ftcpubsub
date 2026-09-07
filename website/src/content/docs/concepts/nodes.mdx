@@ -1,0 +1,32 @@
+---
+title: Nodes
+description: Independent units of code with annotated callbacks.
+---
+
+# Nodes
+
+A `Node` is the home for `@SubscribedTo`, `@RunPeriodically`, and `@RunnableAction` methods. Subclass `Node` and pass the orchestrator to `super(orch)`:
+
+```java
+public class IntakeNode extends Node {
+    public IntakeNode(Orchestrator orch) {
+        super(orch);
+    }
+
+    @SubscribedTo(topic = "intake/set/power")
+    @OnHardwareThread
+    public void onPower(double power) { /* … */ }
+}
+```
+
+Then register it:
+
+```java
+orchestrator.registerNode("intake", new IntakeNode(orchestrator));
+```
+
+`registerNode` runs the annotation binder, which scans for `@SubscribedTo`, `@RunPeriodically`, and `@RunnableAction` methods and wires them up. See `OrchestratorImpl.java:308-326` and `Node.java:40-57`.
+
+## Lifecycle
+
+`Node.close()` is a hook for releasing resources. `Orchestrator.close()` calls it on every node after unregistering it (`OrchestratorImpl.java:511-517`).

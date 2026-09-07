@@ -1,0 +1,46 @@
+---
+import BaseLayout from '~/components/layout/BaseLayout.astro';
+import Nav from '~/components/layout/Nav.astro';
+import Footer from '~/components/layout/Footer.astro';
+import Hero from '~/components/marketing/Hero.astro';
+import FeatureGrid from '~/components/marketing/FeatureGrid.astro';
+import LiveCodePreview from '~/components/marketing/LiveCodePreview.astro';
+import SafetyPillars from '~/components/marketing/SafetyPillars.astro';
+import ArchitectureDiagram from '~/components/marketing/ArchitectureDiagram.astro';
+import ComparisonTable from '~/components/marketing/ComparisonTable.astro';
+import InstallSnippet from '~/components/marketing/InstallSnippet.astro';
+
+const ld = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Synapse',
+    url: 'https://synapse.i-am-coder.dev',
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareSourceCode',
+    name: 'Synapse',
+    description: 'A tiny, annotation-driven pub/sub bus for FIRST Tech Challenge robot code.',
+    codeRepository: 'https://github.com/IamCoder18/synapse',
+    programmingLanguage: 'Java',
+    license: 'https://github.com/IamCoder18/synapse/blob/main/LICENSE',
+    author: { '@type': 'Person', name: 'IamCoder18', url: 'https://github.com/IamCoder18' },
+  },
+];
+---
+<BaseLayout
+  title="Synapse"
+  description="A tiny, annotation-driven pub/sub bus for FIRST Tech Challenge robot code. One hardware thread, type-checked topics, zero runtime dependencies."
+  jsonLd={ld}
+>
+  <Nav />
+  <Hero />
+  <FeatureGrid />
+  <LiveCodePreview />
+  <SafetyPillars />
+  <ArchitectureDiagram />
+  <ComparisonTable />
+  <InstallSnippet />
+  <Footer />
+</BaseLayout>

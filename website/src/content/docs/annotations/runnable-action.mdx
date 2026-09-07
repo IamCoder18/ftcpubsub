@@ -1,0 +1,21 @@
+---
+title: "@RunnableAction"
+description: Register a named, fire-on-demand method.
+---
+
+# @RunnableAction
+
+```java
+@RunnableAction("fire")
+public void fire() { /* … */ }
+```
+
+Then fire it from anywhere:
+
+```java
+orchestrator.runAction("fire");           // returns CompletableFuture<Void>
+```
+
+The action runs on a thread pool with `Integer.MAX_VALUE` as its ceiling. Submissions are rejected after `orchestrator.close()`, after `cancelAllActions()`, or once the pool's transient high-water mark is reached (the default `AbortPolicy` surfaces a `RejectedExecutionException`). If you need to guarantee delivery under any load, wrap the call in your own retry or queueing layer.
+
+The method must take no parameters and return `void`. See `RunnableAction.java:27-31`.

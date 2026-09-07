@@ -1,0 +1,33 @@
+---
+title: Topics
+description: Named, typed channels for inter-module communication.
+---
+
+# Topics
+
+A topic is a string name paired with a Java type. You create topics, publish to them, and either subscribe for every value or fetch the latest.
+
+```java
+Topic<Double> power = orchestrator.getOrCreateTopic("intake/set/power", Double.class);
+orchestrator.publish("intake/set/power", 0.75);
+```
+
+## Type checking
+
+The orchestrator normalizes primitive ↔ wrapper types (`double` ↔ `Double`, `int` ↔ `Integer`, etc.) so an annotation-bound `double` parameter works seamlessly with a programmatically-typed `Double.class` topic. See `OrchestratorImpl.java:165-177` (`boxed()`).
+
+If you publish a value of the wrong type, the orchestrator throws `IllegalArgumentException` with the names of both types (`OrchestratorImpl.java:212-215`).
+
+## Auto-creation
+
+You can skip `getOrCreateTopic` and just publish — the orchestrator will create the topic from the runtime type of the first value (`OrchestratorImpl.java:207-211`). This matches Heron's behavior.
+
+## Latest value cache
+
+Every topic remembers its most recent value:
+
+```java
+Optional<Double> latest = orchestrator.getLatestValue("intake/set/power", Double.class);
+```
+
+Useful when you just need "what was the last gamepad axis?" rather than reacting to every change. See `Topic.java:38-64`.

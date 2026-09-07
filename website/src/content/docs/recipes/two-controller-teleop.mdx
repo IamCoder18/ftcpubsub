@@ -1,0 +1,24 @@
+---
+title: Two-controller teleop
+description: One driver, one operator, two gamepads.
+---
+
+# Two-controller teleop
+
+```java
+@Override
+protected void onSafeInit() {
+    GamepadAdaptor.attach(orchestrator, gamepad1, "driver");
+    GamepadAdaptor.attach(orchestrator, gamepad2, "operator");
+}
+```
+
+Now driver buttons live at `driver/a`, `driver/right_bumper`, … and operator buttons live at `operator/...`. Subscribe as normal:
+
+```java
+@SubscribedTo(topic = "operator/y")
+@OnHardwareThread
+public void onOperatorY(Boolean v) { /* … */ }
+```
+
+The two adaptors are independent — attach each in `onSafeInit` and the rest is just topic naming.

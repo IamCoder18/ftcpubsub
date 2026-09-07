@@ -1,0 +1,34 @@
+---
+title: Orchestrator
+description: The bus that owns topics, nodes, and thread pools.
+---
+
+# Orchestrator
+
+The `Orchestrator` is the bus. One per robot. Create it in your `SafeOpMode` (or manually in tests):
+
+```java
+Orchestrator orch = Orchestrator.create("main");
+HardwareActions hardware = orch.hardware();
+```
+
+On the FTC side, `FtcOrchestrator.create()` is the equivalent factory and wires `android.util.Log` into a `LogSink` (`SafeOpMode.java:49-54`).
+
+## Thread pools
+
+The orchestrator owns three pools plus a dedicated single-thread hardware executor:
+
+| Pool          | Threads        | Used for                                  |
+| ------------- | -------------- | ----------------------------------------- |
+| Scheduler     | 8              | `@RunPeriodically` loops                  |
+| Callback      | 4–16 (q=256)   | `@SubscribedTo` handlers                  |
+| Action        | unbounded      | `@RunnableAction` invocations             |
+| Hardware      | 1 (dedicated)  | All hardware reads/writes                 |
+
+See `OrchestratorImpl.java:55-94` and `README.md` (Threading model section).
+
+## Lifecycle
+
+1. `Orchestrator.create(...)` (or `FtcOrchestrator.create()`) — make the bus.
+2. `orch.registerNode(name, node)` — bind annotations on a node.
+3. `orch.close()` — shut down every pool and unbind every node. `SafeOpMode.stop()` does this for you (`SafeOpMode.java:74-77`).
