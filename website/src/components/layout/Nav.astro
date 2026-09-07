@@ -1,5 +1,6 @@
 ---
 import ThemeToggle from './ThemeToggle.astro';
+import Search from '~/components/react/Search.tsx';
 const path = Astro.url.pathname;
 const isActive = (p: string) => path === p || (p !== '/' && path.startsWith(p));
 ---
@@ -28,6 +29,7 @@ const isActive = (p: string) => path === p || (p !== '/' && path.startsWith(p));
     <li><a href="/community" aria-current={isActive('/community') ? 'page' : undefined}>Community</a></li>
   </ul>
   <div class="syn-nav__right">
+    <Search client:load />
     <ThemeToggle />
     <a class="syn-nav__github" href="https://github.com/IamCoder18/synapse" target="_blank" rel="noopener" aria-label="GitHub repository">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -99,9 +101,12 @@ const isActive = (p: string) => path === p || (p !== '/' && path.startsWith(p));
     border-color: var(--signal-bright);
     color: var(--lime);
   }
-  @media (max-width: 700px) {
-    .syn-nav__links { gap: 0.9rem; }
-    .syn-nav__links a { font-size: 0.85rem; }
+  @media (max-width: 900px) {
+    .syn-nav { flex-wrap: wrap; gap: 0.6rem 1rem; padding: 0.7rem 1rem; }
+    .syn-nav__links { order: 3; flex-basis: 100%; gap: 0.7rem; flex-wrap: wrap; }
+    .syn-nav__right { margin-left: auto; }
+  }
+  @media (max-width: 480px) {
     .syn-nav__github span { display: none; }
   }
 </style>

@@ -3,25 +3,35 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '~/components/layout/BaseLayout.astro';
 import Nav from '~/components/layout/Nav.astro';
 import Footer from '~/components/layout/Footer.astro';
+import { docsUrlFromId } from '~/lib/source';
 
 export async function getStaticPaths() {
   const entries = await getCollection('docs');
   const all = await getCollection('docs');
-  return entries.map((entry) => ({
-    params: { slug: entry.id.replace(/\.(md|mdx)$/, '') },
-    props: { entry, all },
-  }));
+  return entries
+    .map((entry) => {
+      const url = docsUrlFromId(entry.id);
+      if (!url) return null;
+      const slug = url.replace(/^\/docs\//, '').replace(/\/$/, '');
+      return {
+        params: { slug },
+        props: { entry, all },
+      };
+    })
+    .filter((x): x is { params: { slug: string }; props: { entry: any; all: any } } => x !== null);
 }
 
 const { entry, all } = Astro.props;
 const { Content } = await entry.render();
 const title = entry.data.title ?? entry.id;
 const description = entry.data.description;
-const slug = entry.id.replace(/\.(md|mdx)$/, '');
+const url = docsUrlFromId(entry.id);
+const slug = url ? url.replace(/^\/docs\//, '') : '';
 
-const groups: Record<string, typeof all> = {};
+const groups: Record<string, any[]> = {};
 for (const s of all) {
-  const top = s.id.split('/')[0];
+  const top = docsUrlFromId(s.id)?.split('/')[2] ?? '';
+  if (!top) continue;
   groups[top] ??= [];
   groups[top].push(s);
 }
@@ -57,16 +67,18 @@ const groupTitles: Record<string, string> = {
           <h3>{groupTitles[g] ?? g}</h3>
           <ul role="list">
             {items.map((i) => {
-              const id = i.id.replace(/\.(md|mdx)$/, '');
-              const isActive = id === slug;
+              const itemUrl = docsUrlFromId(i.id);
+              if (!itemUrl) return null;
+              const itemSlug = itemUrl.replace(/^\/docs\//, '');
+              const isActive = itemSlug === slug;
               return (
                 <li>
                   <a
-                    href={`/docs/${id}`}
+                    href={itemUrl}
                     aria-current={isActive ? 'page' : undefined}
                     class={isActive ? 'is-active' : ''}
                   >
-                    {i.data.title ?? id}
+                    {i.data.title ?? i.id}
                   </a>
                 </li>
               );

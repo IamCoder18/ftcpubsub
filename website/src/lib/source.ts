@@ -1,6 +1,5 @@
 import { glob } from 'astro/loaders';
 import { defineCollection, z } from 'astro:content';
-import { create, insertMultiple, save } from '@orama/orama';
 
 const docs = defineCollection({
   loader: glob({ pattern: '**/*.{md,mdx}', base: './src/content/docs' }),
@@ -11,27 +10,23 @@ const docs = defineCollection({
   }),
 });
 
-export { docs };
+export const collections = { docs };
 
-export async function buildSearchIndex(
-  pages: Array<{ url: string; title: string; description?: string; content: string }>,
-) {
-  const db = create({
-    schema: {
-      url: 'string',
-      title: 'string',
-      description: 'string',
-      content: 'string',
-    } as const,
-  });
-  await insertMultiple(
-    db,
-    pages.map((p) => ({
-      url: p.url,
-      title: p.title,
-      description: p.description ?? '',
-      content: p.content.slice(0, 4000),
-    })),
-  );
-  return save(db);
+/**
+ * Normalize a content-collection entry id to its public URL path.
+ * - Strips the `.md`/`.mdx` extension.
+ * - Drops a trailing `/index` segment so section roots render at `/docs/<section>`,
+ *   and the docs root renders at `/docs`.
+ * - Adds a leading `/docs/` if no prefix is present.
+ *
+ * Returns `null` for the docs landing id (e.g. `index`) — that page maps to `/docs`
+ * with no slug parameter, which `getStaticPaths` represents as `undefined`.
+ */
+export function docsUrlFromId(id: string): string | null {
+  let path = id.replace(/\.(md|mdx)$/, '');
+  const parts = path.split('/');
+  if (parts[parts.length - 1] === 'index') parts.pop();
+  if (parts.length === 0) return null;
+  if (parts.length === 1 && parts[0] === 'index') return null;
+  return `/docs/${parts.join('/')}`;
 }

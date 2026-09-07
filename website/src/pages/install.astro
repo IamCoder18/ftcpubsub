@@ -3,15 +3,49 @@ import BaseLayout from '~/components/layout/BaseLayout.astro';
 import Nav from '~/components/layout/Nav.astro';
 import Footer from '~/components/layout/Footer.astro';
 
-const groovy = `dependencies {
+const groovy = `repositories {
+    mavenCentral()
+    google()
+    maven {
+        url = uri("https://maven.pkg.github.com/IamCoder18/synapse")
+        credentials {
+            username = findProperty("githubUser") ?: System.getenv("GITHUB_USER") ?: System.getenv("GITHUB_ACTOR")
+            password = findProperty("githubToken") ?: System.getenv("GITHUB_TOKEN")
+        }
+    }
+}
+
+dependencies {
     implementation 'com.aaravlabs:synapse:0.3.1'
 }`;
 
-const kotlinDsl = `dependencies {
+const kotlinDsl = `repositories {
+    mavenCentral()
+    google()
+    maven {
+        url = uri("https://maven.pkg.github.com/IamCoder18/synapse")
+        credentials {
+            username = (findProperty("githubUser") as String?)
+                ?: System.getenv("GITHUB_USER")
+                ?: System.getenv("GITHUB_ACTOR")
+            password = (findProperty("githubToken") as String?)
+                ?: System.getenv("GITHUB_TOKEN")
+        }
+    }
+}
+
+dependencies {
     implementation("com.aaravlabs:synapse:0.3.1")
 }`;
 
-const maven = `<dependency>
+const maven = `<repositories>
+    <repository>
+        <id>github-synapse</id>
+        <url>https://maven.pkg.github.com/IamCoder18/synapse</url>
+    </repository>
+</repositories>
+
+<dependency>
     <groupId>com.aaravlabs</groupId>
     <artifactId>synapse</artifactId>
     <version>0.3.1</version>
@@ -22,12 +56,14 @@ const proguard = `# Already in the JAR. R8 keeps everything you need.
 -keep @com.aaravlabs.synapse.annotation.* class *`;
 
 const verify = `import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.aaravlabs.synapse.ftc.GamepadAdaptor;
 import com.aaravlabs.synapse.ftc.SafeOpMode;
 
 @TeleOp(name = "MyFirstOpMode", group = "Synapse")
 public class MyFirstOpMode extends SafeOpMode {
     @Override protected void onSafeInit() {
-        // You now have: orchestrator, hardware, safeMap ready.
+        // You now have: orch, hardware, safeMap ready.
+        GamepadAdaptor.attach(orch, gamepad1, "g1");
     }
     @Override protected void onSafeLoop() {
         telemetry.update();
@@ -97,7 +133,7 @@ public class MyFirstOpMode extends SafeOpMode {
       <p class="install__hint">
         Add this single line inside <code>onSafeInit()</code> to publish every gamepad field as a topic:
       </p>
-      <pre><code>GamepadAdaptor.attach(orchestrator, gamepad1, "g1");</code></pre>
+      <pre><code>GamepadAdaptor.attach(orch, gamepad1, "g1");</code></pre>
       <p class="install__hint">
         See <a href="/docs/ftc/gamepad-adaptor">GamepadAdaptor</a> for the full topic map.
       </p>

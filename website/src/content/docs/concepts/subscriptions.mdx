@@ -17,7 +17,7 @@ Subscription sub = orchestrator.subscribe("intake/set/power", Double.class, p ->
 sub.unsubscribe();
 ```
 
-The handler runs on the callback pool. Returns a `Subscription` you can cancel.
+The handler runs on the callback pool. The call returns a `Subscription` handle you can cancel.
 
 ## 2. Annotation
 

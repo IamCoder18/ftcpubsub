@@ -1,7 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export default function CopyButton({ value, label = 'Copy' }: { value: string; label?: string }) {
   const [copied, setCopied] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (timerRef.current !== null) clearTimeout(timerRef.current);
+  }, []);
+
   return (
     <button
       type="button"
@@ -9,8 +15,12 @@ export default function CopyButton({ value, label = 'Copy' }: { value: string; l
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(value);
+          if (timerRef.current !== null) clearTimeout(timerRef.current);
           setCopied(true);
-          setTimeout(() => setCopied(false), 1500);
+          timerRef.current = setTimeout(() => {
+            setCopied(false);
+            timerRef.current = null;
+          }, 1500);
         } catch {
           setCopied(false);
         }

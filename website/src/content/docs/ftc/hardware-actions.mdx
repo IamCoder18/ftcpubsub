@@ -26,7 +26,7 @@ Synchronous. Blocks the caller until the hardware thread finishes. Unwraps the o
 ## callAsync
 
 ```java
-CompletableFuture<Double> f = hardware.callAsync(() -> motor.getCurrentPosition());
+CompletableFuture<Integer> pos = hardware.callAsync(() -> motor.getCurrentPosition());
 ```
 
 Returns a `CompletableFuture`. Non-blocking.

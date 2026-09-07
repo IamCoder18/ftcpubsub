@@ -115,17 +115,19 @@ export default function HeroCanvas() {
 
     resize();
     init();
-    if (!reduce) {
-      raf = requestAnimationFrame(draw);
-    } else {
-      // Single static frame for reduced-motion.
+    if (reduce) {
       draw();
       cancelAnimationFrame(raf);
+    } else {
+      raf = requestAnimationFrame(draw);
     }
 
     const ro = new ResizeObserver(() => {
       resize();
-      if (reduce) draw();
+      if (reduce) {
+        draw();
+        cancelAnimationFrame(raf);
+      }
     });
     if (canvas.parentElement) ro.observe(canvas.parentElement);
 

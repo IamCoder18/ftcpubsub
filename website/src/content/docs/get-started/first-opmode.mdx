@@ -34,8 +34,10 @@ public class SynapseFirst extends SafeOpMode {
 
         @RunPeriodically(hz = 50, hardware = true)
         public void drive() {
-            double y = orchestrator.getLatestValue("g1/left_stick_y", Double.class).orElse(0.0);
-            motor.run(m -> m.setPower(-y));
+            // GamepadAdaptor publishes axes as Float; map to double for setPower.
+            double y = -orchestrator.getLatestValue("g1/left_stick_y", Float.class)
+                                     .map(Float::doubleValue).orElse(0.0);
+            motor.run(m -> m.setPower(y));
         }
     }
 }

@@ -8,7 +8,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "test:parse": "node --experimental-vm-modules ./scripts/test-parse.mjs"
+    "test:parse": "node --experimental-strip-types ./scripts/test-parse.mjs"
   },
   "dependencies": {
     "@astrojs/mdx": "^4.0.3",
@@ -28,6 +28,7 @@
     "remark-stringify": "^11.0.0",
     "shiki": "^1.24.0",
     "tailwindcss": "^4.0.0",
+    "tsx": "^4.19.0",
     "unified": "^11.0.5",
     "unist-util-visit": "^5.0.0"
   },

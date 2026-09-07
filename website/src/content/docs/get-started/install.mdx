@@ -1,29 +1,87 @@
 ---
 title: Install
-description: Add Synapse to your FTC Gradle project.
+description: Add Synapse to your FTC Gradle project (GitHub Packages).
 ---
 
 # Install
 
-## Gradle (Groovy)
+Synapse publishes to GitHub Packages at `https://maven.pkg.github.com/IamCoder18/synapse`. You must add that repository and authenticate before Gradle or Maven can resolve `com.aaravlabs:synapse:0.3.1`. The token needs only the `read:packages` scope.
+
+## Step 0 — Configure credentials
+
+Put these in `~/.gradle/gradle.properties` (do **not** commit them):
+
+```properties
+githubUser=<your-github-username>
+githubToken=ghp_your_token_here
+```
+
+## Step 1 — Add the repository + dependency
+
+### Gradle (Groovy)
 
 ```gradle
+repositories {
+    mavenCentral()
+    google()
+    maven {
+        url = uri("https://maven.pkg.github.com/IamCoder18/synapse")
+        credentials {
+            username = findProperty("githubUser") ?: System.getenv("GITHUB_USER") ?: System.getenv("GITHUB_ACTOR")
+            password = findProperty("githubToken") ?: System.getenv("GITHUB_TOKEN")
+        }
+    }
+}
+
 dependencies {
     implementation 'com.aaravlabs:synapse:0.3.1'
 }
 ```
 
-## Gradle (Kotlin DSL)
+### Gradle (Kotlin DSL)
 
 ```kotlin
+repositories {
+    mavenCentral()
+    google()
+    maven {
+        url = uri("https://maven.pkg.github.com/IamCoder18/synapse")
+        credentials {
+            username = (findProperty("githubUser") as String?)
+                ?: System.getenv("GITHUB_USER")
+                ?: System.getenv("GITHUB_ACTOR")
+            password = (findProperty("githubToken") as String?)
+                ?: System.getenv("GITHUB_TOKEN")
+        }
+    }
+}
+
 dependencies {
     implementation("com.aaravlabs:synapse:0.3.1")
 }
 ```
 
-## Maven
+### Maven
 
 ```xml
+<settings>
+  <servers>
+    <server>
+      <id>github-synapse</id>
+      <username>${env.GITHUB_USER}</username>
+      <password>${env.GITHUB_TOKEN}</password>
+    </server>
+  </servers>
+</settings>
+
+<!-- in your pom.xml -->
+<repositories>
+  <repository>
+    <id>github-synapse</id>
+    <url>https://maven.pkg.github.com/IamCoder18/synapse</url>
+  </repository>
+</repositories>
+
 <dependency>
     <groupId>com.aaravlabs</groupId>
     <artifactId>synapse</artifactId>

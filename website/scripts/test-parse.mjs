@@ -1,4 +1,6 @@
 // Smoke test for the changelog parser. Run with `npm run test:parse`.
+// Uses Node 22+ native TypeScript stripping (`--experimental-strip-types`)
+// or the `tsx` package as a fallback.
 import { parseChangelog } from '../src/lib/changelog.ts';
 
 const sample = `# Changelog

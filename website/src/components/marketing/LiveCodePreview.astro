@@ -9,8 +9,11 @@ const code = `public class DriveNode extends Node {
 
     @RunPeriodically(hz = 50, hardware = true)
     public void drive() {
-        double y = orchestrator.getLatestValue("g1/left_stick_y", Double.class).orElse(0.0);
-        double r = orchestrator.getLatestValue("g1/right_stick_y", Double.class).orElse(0.0);
+        // GamepadAdaptor publishes axes as Float.
+        double y = orchestrator.getLatestValue("g1/left_stick_y", Float.class)
+                                .map(Float::doubleValue).orElse(0.0);
+        double r = orchestrator.getLatestValue("g1/right_stick_y", Float.class)
+                                .map(Float::doubleValue).orElse(0.0);
         left.run(m -> m.setPower(-y));
         right.run(m -> m.setPower(-r));
     }

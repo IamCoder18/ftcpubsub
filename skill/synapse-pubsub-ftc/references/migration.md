@@ -4,12 +4,12 @@ Use this when the user has an existing OpMode using direct `DcMotorEx.setPower(.
 
 ## Step 1 — Find every hardware write
 
-Grep the OpMode for:
+Grep the OpMode (and any helper classes it calls) for:
 - `setPower(`, `setPosition(`, `setVelocity(`
 - `getCurrentPosition(`, `getCurrent(`
 - `hardwareMap.get(`
 
-Every call site in `loop()` or `init_loop()` is a candidate.
+Scan **all** OpMode lifecycle paths — `init()`, `init_loop()`, `start()`, `loop()`, `stop()`, and every helper reachable from them — not only `loop()` and `init_loop()`. Hardware writes can hide inside `start()` (e.g. resetting an encoder) or inside private methods called from `loop()`. Leaving any direct call outside the listed paths means the Synapse hardware thread is bypassed.
 
 ## Step 2 — Switch to `extends SafeOpMode`
 
