@@ -24,7 +24,7 @@ public class Repro extends SafeOpMode {
 
 ## Versions
 
-- AaravLabs pub/sub: `com.aaravlabs:pubsub:X.Y.Z`
+- AaravLabs Synapse: `com.aaravlabs:synapse:X.Y.Z`
 - FTC SDK (RobotCore version): `org.firstinspires.ftc:RobotCore:X.Y.Z`
 - Android Gradle Plugin:
 - Gradle:

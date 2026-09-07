@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Project renamed to Synapse.** The repository, Maven artifact, Java
+  package, and brand are now `Synapse` (formerly `AaravLabs PubSub` /
+  `com.aaravlabs:pubsub` / `com.aaravlabs.pubsub.*`). The GitHub repository
+  has been renamed in place; the local folder name is unchanged.
+  - Maven coordinates: `com.aaravlabs:pubsub` → `com.aaravlabs:synapse`
+  - Java base package: `com.aaravlabs.pubsub` → `com.aaravlabs.synapse`
+    (subpackages `.annotation`, `.ftc`, `.internal` are unchanged in name)
+  - ProGuard rules file renamed: `META-INF/proguard/pubsub.pro` →
+    `META-INF/proguard/synapse.pro`
+  - Hardware thread name prefix: `pubsub-` → `synapse-`
+  - README rewritten with a "Why Synapse?" overview, a hardware-threading
+    primer, a threading-model table, and a full API reference
+
 ## [0.2.1] - 2026-09-06
 
 ### Changed
@@ -40,6 +55,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   loops, two-pool isolation, hardware-thread serial execution, soak tests,
   race conditions, and the real-FTC-SDK `Gamepad` field set.
 
-[Unreleased]: https://github.com/IamCoder18/ftcpubsub/compare/v0.2.1...HEAD
-[0.2.1]: https://github.com/IamCoder18/ftcpubsub/compare/v0.2.0...v0.2.1
-[0.2.0]: https://github.com/IamCoder18/ftcpubsub/releases/tag/v0.2.0
+[Unreleased]: https://github.com/IamCoder18/synapse/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/IamCoder18/synapse/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/IamCoder18/synapse/releases/tag/v0.2.0

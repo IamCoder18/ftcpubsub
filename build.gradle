@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'com.aaravlabs'
-version = '0.2.1'
+version = '0.3.0'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_11
@@ -34,18 +34,18 @@ publishing {
         maven(MavenPublication) {
             from components.java
             pom {
-                name = 'AaravLabs PubSub'
+                name = 'AaravLabs Synapse'
                 description = 'Annotation-driven pub/sub bus for FTC robot code with hardware-thread safety.'
-                url = 'https://github.com/IamCoder18/ftcpubsub'
+                url = 'https://github.com/IamCoder18/synapse'
                 licenses {
                     license {
                         name = 'MIT'
                     }
                 }
                 scm {
-                    url = 'https://github.com/IamCoder18/ftcpubsub'
-                    connection = 'scm:git:git://github.com/IamCoder18/ftcpubsub.git'
-                    developerConnection = 'scm:git:ssh://git@github.com/IamCoder18/ftcpubsub.git'
+                    url = 'https://github.com/IamCoder18/synapse'
+                    connection = 'scm:git:git://github.com/IamCoder18/synapse.git'
+                    developerConnection = 'scm:git:ssh://git@github.com/IamCoder18/synapse.git'
                 }
                 developers {
                     developer {
@@ -60,7 +60,7 @@ publishing {
         mavenLocal()
         maven {
             name = 'GitHubPackages'
-            url = 'https://maven.pkg.github.com/IamCoder18/ftcpubsub'
+            url = 'https://maven.pkg.github.com/IamCoder18/synapse'
             credentials {
                 username = project.findProperty('gpr.user') ?: System.getenv('GITHUB_USER') ?: System.getenv('GITHUB_ACTOR')
                 password = project.findProperty('gpr.key') ?: System.getenv('GITHUB_TOKEN')

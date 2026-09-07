@@ -1,6 +1,6 @@
 ---
 name: Pull Request
-about: Contribute a change to AaravLabs PubSub
+about: Contribute a change to AaravLabs Synapse
 title: ''
 labels: ''
 assignees: ''
