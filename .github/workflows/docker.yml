@@ -23,7 +23,7 @@ jobs:
     name: Build & push image
     runs-on: ubuntu-latest
     # Publish only on direct pushes to main or on v* tags. PRs run the
-    # build-pr job (push: false) below.
+    # build-pr job (push: false, no cache-to) below.
     if: github.event_name != 'pull_request'
     permissions:
       contents: read
@@ -53,19 +53,16 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=sha,format=short
             type=raw,value=latest,enable={{is_default_branch}}
-          bake-target: synapse-website
 
       - name: Build and push
         uses: docker/bake-action@v5
         with:
-          # `source` is the build context that the bake target's
-          # context="." resolves to. Bake definition file paths are
-          # resolved relative to this directory, so `docker-bake.hcl`
-          # (not `website/docker-bake.hcl`).
-          source: website
+          # `files` paths are resolved relative to the action's working
+          # directory (the repo root after checkout). The bake target's
+          # own `context` controls where the Dockerfile and source files
+          # are read from.
           files: |
-            docker-bake.hcl
-            ${{ steps.meta.outputs.bake-file }}
+            website/docker-bake.hcl
           targets: synapse-website
           push: true
           tags: ${{ steps.meta.outputs.tags }}
@@ -87,8 +84,9 @@ jobs:
       - name: Build
         uses: docker/bake-action@v5
         with:
-          source: website
           files: |
-            docker-bake.hcl
-          targets: synapse-website
+            website/docker-bake.hcl
+          # Use the dedicated PR target, which omits `cache-to` because
+          # fork PRs lack permission to write to the GHA cache.
+          targets: synapse-website-pr
           push: false
