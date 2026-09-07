@@ -1,0 +1,19 @@
+---
+title: "@SubscribedTo"
+description: Bind a method to a topic.
+---
+
+# @SubscribedTo
+
+```java
+@SubscribedTo(topic = "intake/set/power")
+public void onSetPower(double power) { /* … */ }
+```
+
+The method takes 0 or 1 parameters. With one parameter, its type must match the topic's type (primitive ↔ wrapper is auto-normalized). The annotation is `@Repeatable` — apply it multiple times to subscribe one method to several topics.
+
+See `SubscribedTo.java` for the full reference.
+
+## What happens at runtime
+
+`AnnotationBinder` walks the class, collects every `@SubscribedTo` method, and subscribes a reflection-based handler to the named topic. If `@OnHardwareThread` is also present on the method, the binder wraps the handler so dispatch happens on the hardware thread.

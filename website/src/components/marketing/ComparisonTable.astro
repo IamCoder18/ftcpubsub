@@ -1,0 +1,75 @@
+---
+const rows = [
+  {
+    topic: 'Hardware-thread enforcement',
+    raw: 'Raw FTC leaves thread-safety to the developer. Multiple loop iterations or threads can call setPower/setPosition concurrently.',
+    synapse: 'Synapse provides a single hardware thread (OrchestratorImpl.java:93). All hardware reads/writes funnel through it, and HardwareActions.assertNotHardwareThread() fails fast if you break the rule.',
+  },
+  {
+    topic: 'State coupling',
+    raw: 'Raw FTC subsystems typically hold direct references to each other and to gamepads. Wiring is manual and brittle.',
+    synapse: 'Synapse subsystems are Nodes that talk through typed topics. No direct references — any node can subscribe to any topic.',
+  },
+  {
+    topic: 'Backpressure',
+    raw: 'Raw FTC has no backpressure: a slow callback either blocks the OpMode loop or gets dropped silently.',
+    synapse: 'Synapse’s callback pool uses CallerRunsPolicy (OrchestratorImpl.java:82) — when full, the publisher slows down instead of losing messages.',
+  },
+  {
+    topic: 'Gamepad access',
+    raw: 'Raw FTC reads gamepad1.a/b/x/y fields directly in loop(). State changes are detected by polling and comparing.',
+    synapse: 'GamepadAdaptor reflects every field into topics with rising/falling edge topics (GamepadAdaptor.java:101-127).',
+  },
+  {
+    topic: 'Lifecycle safety',
+    raw: 'Raw FTC requires you to remember to close executors, unsubscribe handlers, and reset sensors.',
+    synapse: 'SafeOpMode.stop() closes the orchestrator for you (SafeOpMode.java:74-77). All periodic loops, callbacks, and actions are shut down together.',
+  },
+];
+---
+<section class="cmp reveal">
+  <header>
+    <h2>Raw FTC vs. Synapse</h2>
+    <p>Design choices. Not benchmark numbers.</p>
+  </header>
+  <div class="cmp__table">
+    <div class="cmp__row cmp__row--head">
+      <div></div>
+      <div>Raw FTC</div>
+      <div>Synapse</div>
+    </div>
+    {rows.map((r) => (
+      <div class="cmp__row">
+        <div class="cmp__topic">{r.topic}</div>
+        <div>{r.raw}</div>
+        <div>{r.synapse}</div>
+      </div>
+    ))}
+  </div>
+</section>
+
+<style>
+  .cmp { padding: 5rem 1.5rem; max-width: 1100px; margin: 0 auto; }
+  .cmp header { text-align: center; margin-bottom: 2rem; }
+  .cmp h2 { font-size: clamp(1.8rem, 4vw, 2.6rem); margin: 0; }
+  .cmp header p { color: var(--text-muted); margin-top: 0.5rem; }
+  .cmp__table { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .cmp__row {
+    display: grid;
+    grid-template-columns: 200px 1fr 1fr;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .cmp__row:last-child { border-bottom: none; }
+  .cmp__row > div { padding: 1rem 1.2rem; }
+  .cmp__row--head {
+    background: var(--surface-2);
+    font-family: var(--font-display);
+    font-weight: 600;
+  }
+  .cmp__topic { color: var(--lime); font-weight: 500; background: var(--surface-1); }
+  @media (max-width: 900px) {
+    .cmp__row { grid-template-columns: 1fr; }
+    .cmp__topic { background: var(--surface-2); }
+  }
+</style>

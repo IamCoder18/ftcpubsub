@@ -1,0 +1,96 @@
+---
+import { ViewTransitions } from 'astro:transitions';
+import '~/styles/global.css';
+
+export interface Props {
+  title: string;
+  description?: string;
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+  ogImage?: string;
+  canonical?: string;
+}
+
+const { title, description, jsonLd, ogImage = '/og-default.png', canonical } = Astro.props;
+const siteName = 'Synapse';
+const fullTitle = title === siteName ? title : `${title} — ${siteName}`;
+const desc = description ?? 'A tiny, annotation-driven pub/sub bus for FIRST Tech Challenge robot code.';
+const url = canonical ?? new URL(Astro.url.pathname, Astro.site ?? Astro.url).toString();
+const ldArray = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
+---
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={desc} />
+    <link rel="canonical" href={url} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={desc} />
+    <meta property="og:url" content={url} />
+    <meta property="og:image" content={new URL(ogImage, Astro.site ?? Astro.url).toString()} />
+    <meta property="og:site_name" content={siteName} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={fullTitle} />
+    <meta name="twitter:description" content={desc} />
+    <meta name="twitter:image" content={new URL(ogImage, Astro.site ?? Astro.url).toString()} />
+    <link rel="alternate" type="text/markdown" href={`${url}.md`} />
+    <link
+      rel="preconnect"
+      href="https://rsms.me/"
+      crossorigin="anonymous"
+    />
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@fontsource-variable/space-grotesk@5.0.20/index.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@fontsource-variable/jetbrains-mono@5.0.20/index.min.css"
+    />
+
+    <!-- FOUC-free theme boot: read localStorage before paint -->
+    <script is:inline>
+      (function () {
+        try {
+          var stored = localStorage.getItem('synapse-theme');
+          var theme = stored === 'light' ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', theme);
+        } catch (_) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      })();
+    </script>
+
+    {ldArray.map((obj) => (
+      <script type="application/ld+json" set:html={JSON.stringify(obj)} />
+    ))}
+
+    <ViewTransitions />
+  </head>
+  <body>
+    <slot />
+    <script>
+      // Reveal-on-scroll (CSS class toggling only; respects prefers-reduced-motion
+      // because `.reveal` already disables the transition when reduced).
+      const io = new IntersectionObserver(
+        (entries) => {
+          for (const e of entries) {
+            if (e.isIntersecting) {
+              e.target.classList.add('is-visible');
+              io.unobserve(e.target);
+            }
+          }
+        },
+        { rootMargin: '0px 0px -10% 0px', threshold: 0.05 },
+      );
+      const apply = () => document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+      document.addEventListener('DOMContentLoaded', apply);
+      document.addEventListener('astro:page-load', apply);
+    </script>
+  </body>
+</html>

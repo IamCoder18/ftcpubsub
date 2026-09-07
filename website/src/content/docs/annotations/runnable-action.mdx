@@ -1,0 +1,21 @@
+---
+title: "@RunnableAction"
+description: Register a named, fire-on-demand method.
+---
+
+# @RunnableAction
+
+```java
+@RunnableAction("fire")
+public void fire() { /* … */ }
+```
+
+Then fire it from anywhere:
+
+```java
+orchestrator.runAction("fire");           // returns CompletableFuture<Void>
+```
+
+The action runs on the unbounded action pool, separate from both the callback pool and the scheduler pool. A long-running action cannot be rejected under load.
+
+The method must take no parameters and return `void`. See `RunnableAction.java:27-31`.

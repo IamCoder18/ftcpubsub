@@ -1,0 +1,40 @@
+---
+title: Subscriptions
+description: Three ways to consume topic values.
+---
+
+# Subscriptions
+
+There are three equivalent ways to receive values on a topic:
+
+## 1. Programmatic
+
+```java
+Subscription sub = orchestrator.subscribe("intake/set/power", Double.class, p -> {
+    intake.run(m -> m.setPower(p));
+});
+// later:
+sub.unsubscribe();
+```
+
+The handler runs on the callback pool. Returns a `Subscription` you can cancel.
+
+## 2. Annotation
+
+```java
+@SubscribedTo(topic = "intake/set/power")
+@OnHardwareThread
+public void onPower(double power) {
+    intake.run(m -> m.setPower(power));
+}
+```
+
+The annotation binder subscribes for you when you `registerNode`. The handler still runs on the callback pool unless you add `@OnHardwareThread`.
+
+## 3. Latest-value fetch
+
+```java
+double now = orchestrator.getLatestValue("intake/set/power", Double.class).orElse(0.0);
+```
+
+No subscription. Useful inside a `@RunPeriodically` loop where you only care about the current value.

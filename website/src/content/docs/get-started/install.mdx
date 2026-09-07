@@ -1,0 +1,43 @@
+---
+title: Install
+description: Add Synapse to your FTC Gradle project.
+---
+
+# Install
+
+## Gradle (Groovy)
+
+```gradle
+dependencies {
+    implementation 'com.aaravlabs:synapse:0.3.1'
+}
+```
+
+## Gradle (Kotlin DSL)
+
+```kotlin
+dependencies {
+    implementation("com.aaravlabs:synapse:0.3.1")
+}
+```
+
+## Maven
+
+```xml
+<dependency>
+    <groupId>com.aaravlabs</groupId>
+    <artifactId>synapse</artifactId>
+    <version>0.3.1</version>
+</dependency>
+```
+
+## R8 / ProGuard
+
+Synapse ships its keep rules inside the JAR at `META-INF/proguard/synapse.pro`, so minification is safe with no extra config. See [`SafeOpMode.java`](https://github.com/IamCoder18/synapse/blob/main/src/main/java/com/aaravlabs/synapse/ftc/SafeOpMode.java) and the build script.
+
+## What you get
+
+- A 40 KB JAR with zero runtime dependencies.
+- The orchestrator, all four annotations, `HardwareActions`, `SafeDevice`, `SafeHardwareMap`, `GamepadAdaptor`, and `SafeOpMode`.
+
+See [First OpMode](/docs/get-started/first-opmode) for the next step.

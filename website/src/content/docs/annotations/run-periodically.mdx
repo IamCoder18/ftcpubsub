@@ -1,0 +1,21 @@
+---
+title: "@RunPeriodically"
+description: Run a method on a fixed-rate loop.
+---
+
+# @RunPeriodically
+
+```java
+@RunPeriodically(hz = 50)
+public void update() { /* … */ }
+
+@RunPeriodically(hz = 50, hardware = true)
+public void updatePID() { /* … */ }
+```
+
+- `hz` — target frequency (default 20). The actual rate is `1000 / hz` ms between method *completions*, so a slow loop never overlaps itself.
+- `hardware = true` — route the loop to the single hardware thread instead of the scheduler pool. Use this for any loop that reads or writes FTC hardware.
+
+The method must take no parameters and return `void`. The annotation is `@Repeatable`.
+
+See `RunPeriodically.java:38-51` for the attribute definitions and `OrchestratorImpl.java:76` for the scheduler pool.

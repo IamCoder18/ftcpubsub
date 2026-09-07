@@ -1,0 +1,25 @@
+---
+title: SafeDevice
+description: A type-safe wrapper around any hardware object.
+---
+
+# SafeDevice
+
+```java
+SafeDevice<DcMotorEx> intake = safeMap.device(DcMotorEx.class, "intake");
+intake.run(m -> m.setPower(0.5));
+int pos = intake.call(DcMotorEx::getCurrentPosition);
+```
+
+Every method on `SafeDevice` submits the call to the hardware thread (`SafeDevice.java:45-55`).
+
+## When to use SafeDevice
+
+- You have a single device you want to wrap.
+- You want `run(...)` and `call(...)` to feel like normal method calls.
+- You're using a method reference (`DcMotorEx::getCurrentPosition`).
+
+## When to use HardwareActions instead
+
+- You have a block of code (multiple statements) that all need to run on the hardware thread.
+- You're not tied to one device.

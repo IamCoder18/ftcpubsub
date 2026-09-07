@@ -1,0 +1,41 @@
+---
+title: API Reference
+description: Public surface of Synapse v0.3.1.
+---
+
+# API Reference
+
+This is the hand-curated public surface for v0.3.1. Anything not listed here is internal and may change without notice.
+
+## `com.aaravlabs.synapse`
+
+| Type | Purpose |
+| --- | --- |
+| `Orchestrator` | The bus. One per robot. |
+| `Node` | Base class for units of code with annotated callbacks. |
+| `Topic<T>` | Named, typed channel. |
+| `Subscription` | Handle returned by `subscribe()`. |
+| `LogSink` | Pluggable logging. |
+
+## `com.aaravlabs.synapse.annotation`
+
+| Annotation | Purpose |
+| --- | --- |
+| `@SubscribedTo(topic = "...")` | Bind a method to a topic. |
+| `@RunPeriodically(hz = 20, hardware = false)` | Loop on a fixed rate. |
+| `@RunnableAction("name")` | Register a fire-on-demand method. |
+| `@OnHardwareThread` | Force a subscriber onto the hardware thread. |
+
+## `com.aaravlabs.synapse.ftc`
+
+| Type | Purpose |
+| --- | --- |
+| `SafeOpMode` | Drop-in `OpMode` base class. |
+| `FtcOrchestrator` | Factory that wires `android.util.Log` into a `LogSink`. |
+| `HardwareActions` | `run` / `call` / `callAsync` / `bulkRead` over the hardware thread. |
+| `SafeDevice<T>` | Hardware wrapper that routes through the hardware thread. |
+| `SafeHardwareMap` | `HardwareMap` that produces `SafeDevice<T>`s. |
+| `GamepadAdaptor` | Reflects `Gamepad` fields into topics. |
+| `BulkReader` | Functional interface for `bulkRead`. |
+| `HardwareView` | Publishes values from a `bulkRead` callback. |
+| `AndroidLogSink` | `LogSink` that writes to `android.util.Log`. |

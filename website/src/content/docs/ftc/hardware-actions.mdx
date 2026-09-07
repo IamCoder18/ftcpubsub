@@ -1,0 +1,43 @@
+---
+title: HardwareActions
+description: The four hardware-thread methods.
+---
+
+# HardwareActions
+
+Obtain via `orchestrator.hardware()`. Four methods, four use cases.
+
+## run
+
+```java
+hardware.run(() -> motor.setPower(0.5));
+```
+
+Async. Schedules the runnable on the hardware thread and returns immediately.
+
+## call
+
+```java
+double pos = hardware.call(() -> motor.getCurrentPosition());
+```
+
+Synchronous. Blocks the caller until the hardware thread finishes. Unwraps the original exception (`HardwareActions.java:81-90`).
+
+## callAsync
+
+```java
+CompletableFuture<Double> f = hardware.callAsync(() -> motor.getCurrentPosition());
+```
+
+Returns a `CompletableFuture`. Non-blocking.
+
+## bulkRead
+
+```java
+BulkReadHandle h = hardware.bulkRead(50, view -> {
+    double amps = motor.getCurrent(CurrentUnit.AMPS);
+    view.publish("motor/amps", amps);
+});
+```
+
+Periodic. Runs the `BulkReader` at `hz` on the hardware thread. Returns a handle to cancel later.

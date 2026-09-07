@@ -1,0 +1,102 @@
+---
+import BaseLayout from '~/components/layout/BaseLayout.astro';
+import Nav from '~/components/layout/Nav.astro';
+import Footer from '~/components/layout/Footer.astro';
+
+const ld = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'Synapse',
+  url: 'https://synapse.i-am-coder.dev',
+  sameAs: ['https://github.com/IamCoder18/synapse'],
+  founder: { '@type': 'Person', name: 'IamCoder18', url: 'https://github.com/IamCoder18' },
+};
+---
+<BaseLayout title="Community" description="Help build Synapse — code, docs, or share what your team built." jsonLd={ld}>
+  <Nav />
+  <main class="cm">
+    <header class="cm__head">
+      <h1>Community</h1>
+      <p class="cm__disclaimer">
+        <strong>Synapse is new.</strong> FTC Team 23684 — Tech Titans is the one team confirmed to
+        be using it. There are no other confirmed users at this time.
+      </p>
+    </header>
+
+    <section class="cm__block">
+      <h2>Contribute code</h2>
+      <p>
+        Issues and pull requests are welcome. The repo lives at
+        <a href="https://github.com/IamCoder18/synapse" rel="noopener">github.com/IamCoder18/synapse</a>.
+        See <a href="https://github.com/IamCoder18/synapse/blob/main/CONTRIBUTING.md" rel="noopener">CONTRIBUTING.md</a>
+        for the workflow and <a href="https://github.com/IamCoder18/synapse/blob/main/CODE_OF_CONDUCT.md" rel="noopener">CODE_OF_CONDUCT.md</a>
+        for the rules of the road.
+      </p>
+      <p>
+        Looking for a starter issue? Search the
+        <a href="https://github.com/IamCoder18/synapse/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22" rel="noopener">good first issue label</a>.
+      </p>
+    </section>
+
+    <section class="cm__block">
+      <h2>Share projects</h2>
+      <p>
+        Are you using Synapse on an FTC robot? Open a PR that adds your team to the list below so
+        other teams can see how Synapse is used in the field.
+      </p>
+      <ul class="cm__teams" role="list">
+        <li>
+          <strong>FTC Team 23684 — Tech Titans</strong>
+          <span class="cm__team-meta">One confirmed team using Synapse.</span>
+        </li>
+      </ul>
+    </section>
+
+    <section class="cm__block">
+      <h2>Improve docs</h2>
+      <p>
+        Every docs page has an "Edit on GitHub" link at the bottom. The source lives in
+        <code>website/src/content/docs/</code>.
+      </p>
+    </section>
+
+    <section class="cm__ladder">
+      <h2>Contributor ladder</h2>
+      <ol role="list">
+        <li><strong>Contributor</strong> — opened a merged PR.</li>
+        <li><strong>Maintainer</strong> — actively triages issues and reviews PRs.</li>
+        <li><strong>Reviewer</strong> — has write access to merge.</li>
+      </ol>
+    </section>
+  </main>
+  <Footer />
+</BaseLayout>
+
+<style>
+  .cm { max-width: 820px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+  .cm__head { text-align: center; margin-bottom: 3rem; }
+  .cm__head h1 { font-size: clamp(2.4rem, 6vw, 3.4rem); margin: 0; }
+  .cm__disclaimer {
+    margin: 1.2rem auto 0;
+    max-width: 60ch;
+    padding: 1rem 1.2rem;
+    background: var(--surface-1);
+    border: 1px solid var(--signal);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 0.95rem;
+  }
+  .cm__block { margin-bottom: 2.5rem; }
+  .cm__block h2 { font-size: 1.4rem; margin: 0 0 0.6rem; }
+  .cm__teams { list-style: none; padding: 0; margin: 0; }
+  .cm__teams li {
+    padding: 0.8rem 1rem;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+  }
+  .cm__team-meta { display: block; color: var(--text-muted); font-size: 0.85rem; }
+  .cm__ladder ol { padding-left: 1.2rem; }
+  .cm__ladder li { line-height: 1.7; }
+</style>

@@ -1,0 +1,27 @@
+---
+title: "@OnHardwareThread"
+description: Force a subscriber onto the single hardware thread.
+---
+
+# @OnHardwareThread
+
+```java
+@SubscribedTo(topic = "intake/set/power")
+@OnHardwareThread
+public void setPower(double power) {
+    motor.setPower(power);
+}
+```
+
+Every `@OnHardwareThread` callback shares the same single OS thread and runs strictly serially with respect to every other piece of hardware-thread work in the orchestrator. See `OrchestratorImpl.java:93-94`.
+
+## Why a dedicated thread?
+
+FTC hardware is not thread-safe. The Lynx bus, `DcMotorEx`, servos, the IMU, and I²C sensors all misbehave when called concurrently from two threads. Synapse funnels every hardware-touching callback through one thread so this race simply cannot happen.
+
+## What it does NOT do
+
+- It does not intercept ad-hoc hardware calls in code that isn't annotated.
+- It does not protect against the OpMode `loop()` calling hardware directly. Move that work into a `Node` with this annotation (or use `SafeDevice`).
+
+See `OnHardwareThread.java:62-75` for the full caveats.

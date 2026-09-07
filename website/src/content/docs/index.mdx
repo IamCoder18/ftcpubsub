@@ -1,0 +1,29 @@
+---
+title: Synapse Docs
+description: The full guide to using Synapse for FTC robot code.
+---
+
+# Synapse Docs
+
+Welcome. Synapse is a tiny pub/sub bus that gives FTC robot code a single dedicated hardware thread and typed topics for inter-module communication.
+
+## 60-second tour
+
+1. Add the dependency (see [Install](/install)).
+2. Extend `SafeOpMode` instead of `OpMode`.
+3. Build `Node`s — one concern each (drive, intake, shooter).
+4. Use `@SubscribedTo`, `@RunPeriodically`, `@RunnableAction` to wire them up.
+5. Anything that touches a `DcMotorEx` / `Servo` / `IMU` runs on the hardware thread.
+
+## Sections
+
+- **[Get Started](/docs/get-started)** — Install and write your first OpMode.
+- **[Concepts](/docs/concepts)** — Orchestrator, topics, nodes, subscriptions.
+- **[Annotations](/docs/annotations)** — `@SubscribedTo`, `@RunPeriodically`, `@RunnableAction`, `@OnHardwareThread`.
+- **[FTC Integration](/docs/ftc)** — SafeOpMode, HardwareActions, SafeDevice, GamepadAdaptor.
+- **[Recipes](/docs/recipes)** — Mecanum drive, bulk reads, two-controller teleop.
+- **[API Reference](/docs/api)** — Hand-curated public surface for v0.3.1.
+
+## For LLMs and agents
+
+Every page is also served as Markdown. See `llms.txt`, `llms-full.txt`, and `docs.md` at the site root, or append `.md` to any docs URL.

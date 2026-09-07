@@ -1,0 +1,32 @@
+---
+title: SafeOpMode
+description: Drop-in OpMode base class with hardware-thread safety.
+---
+
+# SafeOpMode
+
+```java
+@TeleOp(name = "Demo")
+public class Demo extends SafeOpMode {
+    @Override protected void onSafeInit() {
+        SafeDevice<DcMotorEx> intake = safeMap.device(DcMotorEx.class, "intake");
+    }
+    @Override protected void onSafeLoop() { telemetry.update(); }
+}
+```
+
+`SafeOpMode` extends `OpMode` and wires three things for you (`SafeOpMode.java:42-66`):
+
+- `orchestrator` — the bus.
+- `hardware` — a `HardwareActions` facade.
+- `safeMap` — a `SafeHardwareMap` that produces `SafeDevice<T>` instances.
+
+It also enforces that `loop()` never runs on the hardware thread (`hardware.assertNotHardwareThread()`).
+
+## Hooks
+
+- `onSafeInit()` — required, set up nodes here.
+- `onSafeInitLoop()` — between init and start.
+- `onSafeLoop()` — every iteration after start.
+- `onSafeStart()` — when start fires.
+- `onSafeStop()` — before `orch.close()`.
