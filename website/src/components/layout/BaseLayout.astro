@@ -37,7 +37,11 @@ const ldArray = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
     <meta name="twitter:title" content={fullTitle} />
     <meta name="twitter:description" content={desc} />
     <meta name="twitter:image" content={new URL(ogImage, Astro.site ?? Astro.url).toString()} />
-    <link rel="alternate" type="text/markdown" href={`${url}.md`} />
+    {(() => {
+      const p = Astro.url.pathname;
+      const isDocs = p === '/docs' || p === '/docs/' || p.startsWith('/docs/');
+      return isDocs ? <link rel="alternate" type="text/markdown" href={`${p.replace(/\/$/, '')}.md`} /> : null;
+    })()}
     <link
       rel="preconnect"
       href="https://rsms.me/"

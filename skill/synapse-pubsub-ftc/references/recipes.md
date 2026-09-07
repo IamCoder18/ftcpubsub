@@ -19,8 +19,11 @@ public class Mecanum extends SafeOpMode {
     public static class DriveNode extends Node {
         DriveNode(Orchestrator orch, SafeDevice<DcMotorEx> fl, SafeDevice<DcMotorEx> fr,
                   SafeDevice<DcMotorEx> bl, SafeDevice<DcMotorEx> br) {
-            super(orch); this.fl = fl; this.fr = fr; this.bl = bl; this.br = br;
+            super(orch);
+            this.orchestrator = orch;
+            this.fl = fl; this.fr = fr; this.bl = bl; this.br = br;
         }
+        private final Orchestrator orchestrator;
         private final SafeDevice<DcMotorEx> fl, fr, bl, br;
 
         @RunPeriodically(hz = 50, hardware = true)

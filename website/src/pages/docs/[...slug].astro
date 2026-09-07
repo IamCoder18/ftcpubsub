@@ -6,9 +6,8 @@ import Footer from '~/components/layout/Footer.astro';
 import { docsUrlFromId } from '~/lib/source';
 
 export async function getStaticPaths() {
-  const entries = await getCollection('docs');
   const all = await getCollection('docs');
-  return entries
+  return all
     .map((entry) => {
       const url = docsUrlFromId(entry.id);
       if (!url) return null;

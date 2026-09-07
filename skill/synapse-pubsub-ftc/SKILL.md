@@ -62,24 +62,26 @@ Synapse is a tiny Java library (FTC-compatible Maven coords `com.aaravlabs:synap
 
 ```java
 public class DriveNode extends Node {
-    private final HardwareActions hardware;
-    public DriveNode(Orchestrator orch, SafeHardwareMap map) {
+    public DriveNode(Orchestrator orch, SafeDevice<DcMotorEx> left, SafeDevice<DcMotorEx> right) {
         super(orch);
-        this.hardware = orch.hardware();
-        orch.registerNode(this);
+        // Registration happens from the owning OpMode, not from the node's
+        // own constructor — see Common mistake #2.
     }
 
     @SubscribedTo("drive/target")
     void onTarget(TargetPose t) {
-        hardware.run(() -> { /* motor writes */ });
+        // hardware-thread work uses HardwareActions or @OnHardwareThread.
     }
 }
+
+// In the OpMode's onSafeInit():
+// orchestrator.registerNode("drive", new DriveNode(orchestrator, left, right));
 ```
 
 ## Common mistakes
 
 1. Calling `motor.setPower(...)` from `onSafeLoop()` → invalid-thread failure (the call runs on the OpMode thread, not the hardware thread). Use `hardware.run(...)` or `@OnHardwareThread`.
-2. Forgetting `orch.registerNode(this)` → annotations never bind.
+2. Registering the node without a stable name → `Orchestrator.registerNode(String, Node)` requires both. Call it from the owning OpMode, e.g. `orchestrator.registerNode("drive", node)`. Constructor-side `registerNode(this)` does not compile.
 3. Using an `int` topic for a sensor that produces `double` → type mismatch at publish time.
 4. Re-creating an `Orchestrator` per `loop()` call → memory leak and thread churn.
 

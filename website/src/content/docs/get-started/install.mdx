@@ -16,6 +16,15 @@ githubUser=<your-github-username>
 githubToken=ghp_your_token_here
 ```
 
+For Maven, set the same values as **environment variables** so the `<settings>` server entry below can read them:
+
+```bash
+export GITHUB_USER=<your-github-username>
+export GITHUB_TOKEN=ghp_your_token_here
+```
+
+Either form satisfies GitHub Packages' `read:packages` requirement.
+
 ## Step 1 — Add the repository + dependency
 
 ### Gradle (Groovy)

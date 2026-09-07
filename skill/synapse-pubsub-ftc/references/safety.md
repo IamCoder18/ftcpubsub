@@ -8,7 +8,7 @@ The four properties Synapse provides around FTC hardware access. Each cites the 
 
 **Where it's enforced.** `src/main/java/com/aaravlabs/synapse/OrchestratorImpl.java:93-94` — `Executors.newSingleThreadScheduledExecutor(hwTf)`.
 
-**Out of scope.** Ad-hoc hardware calls from code that is *not* routed through Synapse (e.g. raw `motor.setPower(...)` from `SafeOpMode.loop()` or from a non-annotated callback) bypass this thread entirely. Such code triggers `HardwareActions.assertNotHardwareThread()` from the `SafeOpMode` base class on the next `loop()` tick.
+**Out of scope.** Ad-hoc hardware calls from code that is *not* routed through Synapse (e.g. raw `motor.setPower(...)` from `SafeOpMode.loop()` or from a non-annotated callback) bypass this thread entirely. Such code is outside these invariants; the `HardwareActions.assertNotHardwareThread()` check in `SafeOpMode.loop()` only proves that the *OpMode loop itself* is not running on the hardware thread. It does not detect or intercept raw ad-hoc writes.
 
 **Test.** `src/test/java/com/aaravlabs/synapse/HardwareThreadTest.java` — six `@Test` methods covering serial execution, ordering under load, and the `assertNotHardwareThread()` path.
 
