@@ -1,248 +1,276 @@
-# Aarav PubSub for FTC
+# AaravLabs PubSub
 
-A tiny annotation-driven pub/sub bus for FTC robot code. Write `Node`s that talk to each
-other through named, typed topics instead of direct references. The orchestrator manages
-threads, so `@SubscribedTo` callbacks and `@RunPeriodically` loops never block each
-other.
+[![CI](https://github.com/IamCoder18/ftcpubsub/actions/workflows/ci.yml/badge.svg)](https://github.com/IamCoder18/ftcpubsub/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![Latest release](https://img.shields.io/github/v/tag/IamCoder18/ftcpubsub?label=release)](https://github.com/IamCoder18/ftcpubsub/releases)
+[![Maven Package](https://img.shields.io/badge/Maven-GitHub%20Packages-blue)](https://github.com/IamCoder18/ftcpubsub/packages)
 
-Designed to be installed like [Pedro Pathing](https://pedropathing.com) or
-[Road Runner](https://github.com/acmerobotics/road-runner): a single Maven artifact
-added to your `build.dependencies.gradle`.
+A tiny annotation-driven pub/sub bus for FTC robot code.
+
+Write `Node`s that talk to each other through named, typed topics instead of
+direct references. The orchestrator manages threads, so `@SubscribedTo`
+callbacks and `@RunPeriodically` loops never block each other, and **all
+hardware-touching code runs on a single dedicated thread** — the only safe
+way to use `DcMotorEx`, servos, sensors, and bulk reads in an FTC program.
+
+```java
+@TeleOp(name = "Demo", group = "Test")
+public class DemoOpMode extends SafeOpMode {
+    @Override protected void onSafeInit() {
+        SafeDevice<DcMotorEx> intake = safeMap.device(DcMotorEx.class, "intake");
+        GamepadAdaptor.attach(orch, gamepad1, "g1");
+    }
+
+    @Override protected void onSafeLoop() {
+        telemetry.addData("intake", orch.getLatestValue("intake/power", Double.class).orElse(0.0));
+        telemetry.update();
+    }
+
+    public static class IntakeNode extends Node {
+        IntakeNode(Orchestrator o, SafeDevice<DcMotorEx> intake) { super(o); this.intake = intake; }
+        private final SafeDevice<DcMotorEx> intake;
+
+        @SubscribedTo(topic = "g1/right_bumper/rising")
+        @OnHardwareThread
+        public void onPress(Boolean v) { intake.run(m -> m.setPower(1.0)); }
+
+        @SubscribedTo(topic = "g1/right_bumper/falling")
+        @OnHardwareThread
+        public void onRelease(Boolean v) { intake.run(m -> m.setPower(0.0)); }
+    }
+}
+```
+
+## Features
+
+- **Annotation-driven wiring** — `@SubscribedTo`, `@RunPeriodically`,
+  `@RunnableAction`, `@OnHardwareThread`.
+- **Hardware thread safety** — a dedicated single thread for all hardware I/O;
+  runtime check in `SafeOpMode.loop()` makes accidental off-thread access fail
+  fast.
+- **Two-pool threading model** — separate scheduled and callback thread pools
+  with blocking-queue backpressure so slow callbacks can't starve periodic
+  loops and vice-versa.
+- **`SafeDevice<T>` and `SafeHardwareMap`** — wrap any `HardwareMap` device so
+  every method call routes through the hardware thread.
+- **`HardwareActions`** facade — `run`, `call`, `callAsync`, `bulkRead` for
+  ergonomic hardware access from anywhere.
+- **`GamepadAdaptor`** — reflects the FTC SDK's `Gamepad` fields and publishes
+  them to topics (`<gamepad>/<button>`, `/rising`, `/falling`, `/<axis>`)
+  every 60 Hz.
+- **Zero runtime dependencies** — the JAR is 40 KB with no transitive deps.
+- **R8-minify-safe** — verified by running the full test suite through R8.
 
 ## Installation
 
-1. In your FTC project root, add the Aarav Maven repo + dependency:
+Add this to `build.dependencies.gradle` in your FTC project:
 
-   ```gradle
-   // build.dependencies.gradle
-   repositories {
-       mavenLocal()       // if installing locally (see "Building from source" below)
-       mavenCentral()
-       google()
-   }
+```gradle
+repositories {
+    mavenCentral()
+    google()
+    maven {
+        url = uri("https://maven.pkg.github.com/IamCoder18/ftcpubsub")
+        credentials {
+            username = findProperty("githubUser") ?: System.getenv("GITHUB_USER") ?: System.getenv("GITHUB_ACTOR")
+            password = findProperty("githubToken") ?: System.getenv("GITHUB_TOKEN")
+        }
+    }
+}
 
-   dependencies {
-       implementation 'com.aarav:pubsub:0.1.0'
-       // ... your other FTC deps
-   }
-   ```
+dependencies {
+    implementation 'com.aaravlabs:pubsub:0.2.1'
+    // ... your other FTC deps
+}
+```
 
-2. In your OpMode, create one orchestrator and register your nodes:
+GitHub Packages requires authentication on every download even for public
+packages. Configure credentials via `~/.gradle/gradle.properties`:
 
-   ```java
-   public class MyTeleOp extends OpMode {
-       private Orchestrator orch;
+```properties
+githubUser=IamCoder18
+githubToken=ghp_your_token_here
+```
 
-       @Override public void init() {
-           orch = FtcOrchestrator.create();
-           orch.getOrCreateTopic("intake/set/power", Double.class);
+The token only needs `read:packages` scope.
 
-           orch.registerNode("intake", new IntakeNode(orch, hardwareMap));
-           orch.registerNode("drivetrain", new DrivetrainNode(orch, hardwareMap));
+## Quickstart
 
-           GamepadAdaptor.attach(orch, gamepad1, "gamepad1");
+```java
+@TeleOp(name = "PubsubDemo", group = "Demo")
+public class PubsubDemo extends SafeOpMode {
 
-           orch.runAction("init");
-       }
+    @Override
+    protected void onSafeInit() {
+        SafeDevice<DcMotorEx> left  = safeMap.device(DcMotorEx.class, "leftMotor");
+        SafeDevice<DcMotorEx> right = safeMap.device(DcMotorEx.class, "rightMotor");
 
-       @Override public void loop() {
-           // 10 ms tick — OpModes don't need to do anything themselves anymore.
-           try { Thread.sleep(10); } catch (InterruptedException ignored) {}
-       }
+        orch.registerNode("drive", new DriveNode(left, right));
+        GamepadAdaptor.attach(orch, gamepad1, "g1");
+    }
 
-       @Override public void stop() {
-           orch.close();
-       }
-   }
-   ```
+    @Override
+    protected void onSafeLoop() {
+        telemetry.update();
+    }
+
+    public static class DriveNode extends Node {
+        DriveNode(SafeDevice<DcMotorEx> left, SafeDevice<DcMotorEx> right) {
+            super(/* your orchestrator */);
+            this.left = left;
+            this.right = right;
+        }
+        private final SafeDevice<DcMotorEx> left, right;
+
+        @RunPeriodically(hz = 50, hardware = true)
+        public void drive() {
+            double y = orchestrator.getLatestValue("g1/left_stick_y", Double.class).orElse(0.0);
+            double r = orchestrator.getLatestValue("g1/right_stick_y", Double.class).orElse(0.0);
+            left.run(m -> m.setPower(-y));
+            right.run(m -> m.setPower(-r));
+        }
+    }
+}
+```
+
+## Documentation
+
+- [Why two thread pools](#why-two-thread-pools) — explainer of the executor model.
+- [Hardware threading](#hardware-threading--the-most-important-section) — the
+  most important section to read before you ship.
+- [`PubsubSmokeTest`](https://github.com/ATAARobotics/23684-Canopy-Biobuzz/blob/test/aaravlabs-pubsub/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/PubsubSmokeTest.java)
+  in the biobuzz test worktree — a real working OpMode exercising every
+  feature.
+- [`CHANGELOG.md`](./CHANGELOG.md) — version history.
 
 ## Concepts
 
 ### Topics
 
-A topic is a named, typed channel. Create them with
-`orch.getOrCreateTopic(name, type)` and publish to them with `orch.publish(name, value)`.
-
-```java
-orch.getOrCreateTopic("intake/set/power", Double.class);
-orch.publish("intake/set/power", 0.8);
-```
+A topic is a named, typed channel. Create with
+`orch.getOrCreateTopic(name, type)`, publish with `orch.publish(name, value)`,
+fetch with `orch.getLatestValue(name, type)`.
 
 ### Subscribing
 
 Three ways, pick whichever fits:
 
 ```java
-// 1) Programmatic — gives you a Subscription handle you can unsubscribe later.
+// 1) Programmatic — returns a Subscription you can unsubscribe later.
 orch.subscribe("intake/set/power", Double.class, p -> intake.setPower(p));
 
 // 2) Annotation — declared on a Node method, wired automatically.
 @SubscribedTo(topic = "intake/set/power")
 public void onSetPower(double power) { intake.setPower(power); }
 
-// 3) Fetch the latest value on demand (no subscription needed).
+// 3) Fetch the latest value on demand — no subscription needed.
 Optional<Double> latest = orch.getLatestValue("intake/set/power", Double.class);
 ```
 
 ### Periodic loops
 
 ```java
-@RunPeriodically(hz = 50)  // default 20 Hz
-public void update() {
-    // Runs on the orchestrator's scheduler pool — never blocks subscribers.
-}
+@RunPeriodically(hz = 50)
+public void update() { /* runs on the scheduler pool */ }
+
+@RunPeriodically(hz = 50, hardware = true)
+public void update() { motor.setPower(...); /* runs on the hardware thread */ }
 ```
 
-### Named actions
+### Hardware-thread API
 
 ```java
-@RunnableAction("fire")
-public void fire() {
-    orch.publish("gate/open", true);
-    try { Thread.sleep(250); } catch (InterruptedException ignored) {}
-    orch.publish("gate/close", true);
-}
+hw.run(() -> motor.setPower(0.5));
+double pos = hw.call(() -> motor.getCurrentPosition());
+CompletableFuture<Double> future = hw.callAsync(() -> motor.getCurrentPosition());
 
-// From anywhere:
-orch.runAction("fire");   // returns CompletableFuture<Void>
+hw.bulkRead(50, view -> {
+    double amps = motor.getCurrent(CurrentUnit.AMPS);
+    view.publish("motor/amps", amps);
+});
 ```
 
 ### Gamepad
 
-```java
-GamepadAdaptor.attach(orch, gamepad1, "gamepad1");
-```
+`GamepadAdaptor.attach(orch, gamepad1, "g1")` publishes:
 
-publishes these topics at 60 Hz:
-
-| Topic                          | Type    | Meaning                              |
-| ------------------------------ | ------- | ------------------------------------ |
-| `gamepad1/<button>`            | Boolean | current state                        |
-| `gamepad1/<button>/rising`     | Boolean | fires (value=true) on 0→1 transition |
-| `gamepad1/<button>/falling`    | Boolean | fires on 1→0 transition              |
-| `gamepad1/<axis>`              | Float   | current value                        |
-
-So you can write:
-
-```java
-@SubscribedTo(topic = "gamepad1/right_bumper/rising")
-public void startIntake() {
-    orch.publish("intake/set/power", 1.0);
-}
-
-@SubscribedTo(topic = "gamepad1/right_bumper/falling")
-public void stopIntake() {
-    orch.publish("intake/set/power", 0.0);
-}
-```
+| Topic                  | Type    | Meaning                              |
+| ---------------------- | ------- | ------------------------------------ |
+| `g1/<button>`          | Boolean | current state                        |
+| `g1/<button>/rising`   | Boolean | fires (value=true) on 0→1 transition |
+| `g1/<button>/falling`  | Boolean | fires on 1→0 transition              |
+| `g1/<axis>`            | Float   | current value                        |
 
 ## Why two thread pools?
 
 The orchestrator runs:
 
 - **Scheduler pool** (8 threads) for `@RunPeriodically` loops.
-- **Callback pool** (4–16 threads, bounded queue of 256) for `@SubscribedTo` callbacks.
+- **Callback pool** (4–16 threads, bounded queue of 256) for `@SubscribedTo`
+  callbacks.
 - **Action pool** (unbounded) for `@RunnableAction` invocations.
-- **Hardware thread** (single dedicated thread) for any code that reads/writes
-  FTC hardware. See the next section.
+- **Hardware thread** (single dedicated thread) for any code that
+  reads/writes FTC hardware.
 
-If a callback ever blocks (say, a slow `DcMotorEx` write), it cannot starve a periodic
-loop — they run on separate pools. The callback pool uses
-`CallerRunsPolicy` for backpressure: when the queue fills, the publisher
-slows down instead of dropping messages.
+If a callback ever blocks (say, a slow `DcMotorEx` write), it cannot starve a
+periodic loop — they run on separate pools. The callback pool uses
+`CallerRunsPolicy` for backpressure: when the queue fills, the publisher slows
+down instead of dropping messages.
+
+A third, unbounded pool handles `@RunnableAction` invocations so a long action
+can't be rejected.
 
 ## Hardware threading — the most important section
 
-FTC hardware (`DcMotorEx`, servos, I2C sensors, the IMU, the `HardwareMap` itself)
-is **not thread-safe**. Calling `setPower`, `setPosition`, or reading any sensor
-from two threads at the same time produces race conditions, garbled serial-bus
-responses, or `ConcurrentModificationException` crashes deep in the SDK.
+> [!IMPORTANT]
+> FTC hardware is **not thread-safe**. Calling `setPower`, `setPosition`, or
+> reading any sensor from two threads at the same time produces race
+> conditions, garbled serial-bus responses, or
+> `ConcurrentModificationException` crashes deep in the SDK.
 
-The library gives you **three layers** of hardware-thread safety. Use whichever
-matches your code style.
+The library gives you **three layers** of hardware-thread safety. Use
+whichever matches your code style.
 
 ### Layer 1: Annotations on Node methods
 
 ```java
-public class IntakeNode extends Node {
-    private final DcMotorEx motor;
+@SubscribedTo(topic = "intake/set/power")
+@OnHardwareThread
+public void setPower(double power) {
+    HardwareThread.assertCurrent();   // optional defensive check
+    motor.setPower(power);
+}
 
-    public IntakeNode(Orchestrator orch, HardwareMap hwMap) {
-        super(orch);
-        this.motor = hwMap.get(DcMotorEx.class, "intake");
-    }
-
-    // Runs on the single hardware thread — safe to call motor.setPower().
-    @SubscribedTo(topic = "intake/set/power")
-    @OnHardwareThread
-    public void setPower(double power) {
-        motor.setPower(power);
-    }
-
-    // 50Hz PID controller; runs on the hardware thread.
-    @RunPeriodically(hz = 50, hardware = true)
-    public void updatePID() {
-        motor.setPower(pid.update(motor.getCurrentPosition()));
-    }
+@RunPeriodically(hz = 50, hardware = true)
+public void updatePID() {
+    motor.setPower(pid.update(motor.getCurrentPosition()));
 }
 ```
 
-### Layer 2: `HardwareActions` facade (run / call / bulkRead)
-
-When you want hardware-thread execution but you don't have a `@SubscribedTo`
-callback handy — e.g. inside your `OpMode.init()` — use the `HardwareActions`
-facade returned by `orchestrator.hardware()`:
+### Layer 2: `HardwareActions` facade
 
 ```java
 HardwareActions hw = orch.hardware();
 
-// Async — returns immediately; work queued on the hardware thread.
 hw.run(() -> intake.setPower(0.5));
-
-// Sync — blocks the caller until the hardware thread completes; returns the value.
 double pos = hw.call(() -> intake.getCurrentPosition());
-
-// Async with a future — non-blocking.
-CompletableFuture<Double> future = hw.callAsync(() -> intake.getCurrentPosition());
-
-// Bulk read — runs a periodic reader on the hardware thread and lets it publish
-// values to topics. Main thread reads from topics.
 hw.bulkRead(50, view -> {
-    double amps = intake.getCurrent(CurrentUnit.AMPS);
-    view.publish("intake/amps", amps);
+    view.publish("intake/amps", intake.getCurrent(CurrentUnit.AMPS));
 });
 ```
 
 ### Layer 3: `SafeDevice<T>` and `SafeHardwareMap`
 
-The safest pattern: never call hardware methods directly. Wrap your hardware
-lookups in a `SafeHardwareMap` and use the returned `SafeDevice` wrappers:
-
 ```java
-@Override public void init() {
-    orch = FtcOrchestrator.create();
-    HardwareActions hw = orch.hardware();
-    SafeHardwareMap safe = new SafeHardwareMap(hardwareMap, hw);
-
-    SafeDevice<DcMotorEx> intake = safe.device(DcMotorEx.class, "intake");
-    intake.run(m -> m.setPower(0.5));           // async, safe
-    int pos = intake.call(DcMotorEx::getCurrentPosition);  // sync, safe
-
-    // Or for many operations in a row, schedule them all at once:
-    hw.run(() -> {
-        DcMotorEx m = hardwareMap.get(DcMotorEx.class, "intake");
-        m.setPower(0.5);
-        m.setTargetPosition(1000);
-        m.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-    });
-}
+SafeHardwareMap safe = new SafeHardwareMap(hardwareMap, hw);
+SafeDevice<DcMotorEx> intake = safe.device(DcMotorEx.class, "intake");
+intake.run(m -> m.setPower(0.5));
+int pos = intake.call(DcMotorEx::getCurrentPosition);
 ```
 
-### Recommended `SafeOpMode` pattern
+### Drop-in `SafeOpMode` template
 
-A short base class you can drop into your project wraps the orchestrator lifecycle
-and asserts your loop never runs on the hardware thread. Copy this into your
-project:
+A short base class for your project:
 
 ```java
 public abstract class SafeOpMode extends OpMode {
@@ -251,92 +279,30 @@ public abstract class SafeOpMode extends OpMode {
     protected SafeHardwareMap safeMap;
 
     @Override public final void init() {
-        orch = FtcOrchestrator.create();
+        orch = com.aaravlabs.pubsub.ftc.FtcOrchestrator.create();
         hardware = orch.hardware();
         safeMap = new SafeHardwareMap(hardwareMap, hardware);
         onSafeInit();
     }
 
-    @Override public final void init_loop() { onSafeInitLoop(); }
-
     @Override public final void loop() {
-        hardware.assertNotHardwareThread();   // throws if loop ever runs on hw thread
-        hardware.tick();
+        hardware.assertNotHardwareThread();   // fails fast if you broke the rule
         onSafeLoop();
     }
 
-    @Override public final void start()  { onSafeStart(); }
-    @Override public final void stop()   { orch.close(); }
+    @Override public final void stop() { orch.close(); }
 
     protected abstract void onSafeInit();
-    protected void onSafeStart() {}
-    protected void onSafeInitLoop() {}
     protected void onSafeLoop() {}
 }
 ```
 
-**Rules of thumb:**
+## Contributing
 
-1. Any method that touches `HardwareMap` or any device on it must be on the
-   hardware thread (via `@OnHardwareThread`, `@RunPeriodically(hardware=true)`,
-   or `HardwareActions.run/call`).
-2. Don't touch hardware from `loop()`. Move that code into a Node with
-   `@OnHardwareThread` or use `HardwareActions.run(...)` to schedule it.
-3. Don't touch hardware from non-annotated `@SubscribedTo` callbacks.
+Issues and PRs welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md) for the
+workflow, [CONDUCT.md](./CODE_OF_CONDUCT.md) for the code of conduct, and
+[CHANGELOG.md](./CHANGELOG.md) for the version history.
 
+## License
 
-
-## Project layout
-
-```
-pubsub/
-├── settings.gradle
-├── build.gradle                 ← publishes com.aarav:pubsub:0.1.0 to mavenLocal
-└── src/
-    ├── main/java/com/aarav/pubsub/
-    │   ├── Orchestrator.java        ← public interface
-    │   ├── OrchestratorImpl.java    ← default impl with two pools
-    │   ├── Topic.java               ← typed channel + latest-value cache
-    │   ├── Subscription.java        ← handle to unsubscribe
-    │   ├── Node.java                ← base class
-    │   ├── LogSink.java             ← pluggable logging
-    │   ├── MessageHandler.java
-    │   ├── annotation/
-    │   │   ├── SubscribedTo.java
-    │   │   ├── RunPeriodically.java
-    │   │   └── RunnableAction.java
-    │   ├── internal/
-    │   │   └── AnnotationBinder.java  ← reflection scanner
-    │   └── ftc/
-    │       ├── FtcOrchestrator.java  ← factory that uses android.util.Log
-    │       ├── AndroidLogSink.java
-    │       └── GamepadAdaptor.java
-    └── test/java/com/aarav/pubsub/
-        ├── TopicTest.java
-        ├── NodeTest.java
-        ├── ActionTest.java
-        └── ThreadingTest.java
-```
-
-## Building from source
-
-```bash
-cd pubsub
-gradle test              # run JUnit tests
-gradle publishToMavenLocal  # publishes to ~/.m2/repository/com/aarav/pubsub/0.1.0/
-```
-
-The library has zero runtime dependencies and zero dependencies on the FTC SDK — all
-FTC-specific code (`android.util.Log`, `Gamepad`) is accessed via reflection, so the
-core compiles and tests run on any plain JVM.
-
-## Testing
-
-18 unit tests, no FTC SDK required:
-
-```bash
-gradle test
-```
-
-Tests cover topic creation, latest-value cache, publish/subscribe mechanics,
-annotation wiring, periodic scheduling, action invocation, and pool isolation.
+[MIT](./LICENSE) © 2026 AaravLabs
