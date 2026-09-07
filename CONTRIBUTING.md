@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for your interest in contributing to AaravLabs Synapse! This document
+Thanks for your interest in contributing to Synapse! This document
 covers how to set up the project locally, run the test suite, and submit changes.
 
 ## Code of conduct
@@ -37,7 +37,7 @@ checked in).
 ./gradlew publishToMavenLocal
 
 # Publish to GitHub Packages (requires `gpr.user` + `gpr.key` or `GITHUB_TOKEN`).
-GITHUB_USER=IamCoder18 GITHUB_TOKEN=$(gh auth token) \
+GITHUB_USER=<your-github-username> GITHUB_TOKEN=$(gh auth token) \
     ./gradlew publishMavenPublicationToGitHubPackagesRepository
 ```
 

@@ -34,7 +34,7 @@ publishing {
         maven(MavenPublication) {
             from components.java
             pom {
-                name = 'AaravLabs Synapse'
+                name = 'Synapse'
                 description = 'Annotation-driven pub/sub bus for FTC robot code with hardware-thread safety.'
                 url = 'https://github.com/IamCoder18/synapse'
                 licenses {
@@ -50,7 +50,7 @@ publishing {
                 developers {
                     developer {
                         id = 'IamCoder18'
-                        name = 'AaravLabs'
+                        name = 'IamCoder18'
                     }
                 }
             }

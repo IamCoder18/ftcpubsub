@@ -313,7 +313,7 @@ GitHub Packages requires authentication on every download even for public
 packages. Configure credentials via `~/.gradle/gradle.properties`:
 
 ```properties
-githubUser=IamCoder18
+githubUser=<your-github-username>
 githubToken=ghp_your_token_here
 ```
 
@@ -365,4 +365,4 @@ conduct, and [CHANGELOG.md](./CHANGELOG.md) for the version history.
 
 ## License
 
-[MIT](./LICENSE) © 2026 AaravLabs
+[MIT](./LICENSE)

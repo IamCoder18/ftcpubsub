@@ -4,7 +4,7 @@ import com.aaravlabs.synapse.Orchestrator;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
 /**
- * Base class for {@link OpMode} subclasses that use the AaravLabs pub/sub bus
+ * Base class for {@link OpMode} subclasses that use the Synapse pub/sub bus
  * with hardware-thread safety. Extends the FTC SDK's {@code OpMode} and
  * provides:
  *

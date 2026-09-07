@@ -11,7 +11,7 @@
 
 Please **do not** open a public issue for security problems. Instead, email
 security reports to the maintainers via the contact listed in
-[`/IamCoder18/synapse`](https://github.com/IamCoder18/synapse).
+[the repository](https://github.com/IamCoder18/synapse).
 
 We will acknowledge receipt within 48 hours and aim to ship a fix or
 mitigation within 7 days for anything that affects the bus's correctness or
