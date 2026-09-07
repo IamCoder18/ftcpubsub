@@ -39,7 +39,11 @@ const ldArray = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
     <meta name="twitter:image" content={new URL(ogImage, Astro.site ?? Astro.url).toString()} />
     {(() => {
       const p = Astro.url.pathname;
-      const isDocs = p === '/docs' || p === '/docs/' || p.startsWith('/docs/');
+      // Only advertise a markdown mirror for paths with a real per-page .md
+      // mirror under /docs/* — `src/pages/docs.md.ts` is the aggregate llms-full
+      // endpoint, not a mirror of `/docs`, and `/docs/index.astro` has no MDX
+      // counterpart either.
+      const isDocs = p.startsWith('/docs/') && p !== '/docs/';
       return isDocs ? <link rel="alternate" type="text/markdown" href={`${p.replace(/\/$/, '')}.md`} /> : null;
     })()}
     <link
