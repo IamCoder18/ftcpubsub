@@ -1,7 +1,15 @@
+# Standalone compose file. The image is published to GitHub Container
+# Registry from this repo's main branch and tags — see
+# .github/workflows/docker.yml. Pull a specific tag in production:
+#
+#   SYNAPSE_SITE_IMAGE=ghcr.io/iamcoder18/synapse-website:0.3.1 \
+#     docker compose up -d
+#
+# Override `SYNAPSE_SITE_IMAGE` to pin a tag; omit it for `:latest`.
+
 services:
   web:
-    build: .
-    image: synapse-website:local
+    image: ${SYNAPSE_SITE_IMAGE:-ghcr.io/iamcoder18/synapse-website:latest}
     container_name: synapse-website
     restart: unless-stopped
     ports:
@@ -10,4 +18,5 @@ services:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
       interval: 30s
       timeout: 3s
+      start_period: 10s
       retries: 3

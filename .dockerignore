@@ -1,0 +1,54 @@
+# Build context is now the repo root (see website/docker-bake.hcl), so
+# BuildKit reads this file instead of website/.dockerignore. Mirror the
+# previous exclusions plus the additional paths that exist at the repo
+# root. Keeping the build context small avoids dragging .git/, the Java
+# Gradle build output, and other unrelated paths into every docker buildx
+# bake invocation.
+
+# VCS
+.git
+.gitignore
+.gitattributes
+
+# Build outputs (each language)
+build/
+.gradle/
+out/
+
+# Node / website caches and artifacts
+website/node_modules/
+website/.astro/
+website/dist/
+website/.dockerignore
+
+# Container + workflow tooling
+# website/Dockerfile must stay in the build context (bake target context='.'
+# and dockerfile='website/Dockerfile'). Re-include it explicitly:
+!website/Dockerfile
+website/docker-compose.yaml
+website/docker-bake.hcl
+website/.env
+website/.env.local
+
+# Editor + OS noise
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Editor configs
+.idea/
+.vscode/
+
+# CI config
+.github/
+
+# Documentation that doesn't need to ship in the image
+README.md
+*.md
+!CHANGELOG.md
+LICENSE

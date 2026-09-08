@@ -1,0 +1,108 @@
+name: Docker image
+
+# Default permissions are least-privilege; the push job elevates to
+# packages: write below. This satisfies zizmor's excessive-permissions check.
+permissions:
+  contents: read
+
+# A newer push to the same ref cancels any older push that is still
+# running, so an older job can't replace `latest` with an older commit
+# if it happens to finish after a newer one has already published.
+concurrency:
+  group: docker-image-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  # github.repository_owner preserves the owner's display case (e.g.
+  # `IamCoder18`). GHCR resolves package lookups case-insensitively at the
+  # storage layer, so `ghcr.io/IamCoder18/synapse-website` and
+  # `ghcr.io/iamcoder18/synapse-website` point at the same package — we use
+  # the lowercase spelling in the docker-compose files purely for
+  # readability.
+  IMAGE_NAME: ${{ github.repository_owner }}/synapse-website
+
+jobs:
+  build:
+    name: Build & push image
+    runs-on: ubuntu-latest
+    # Publish only on direct pushes to main or on v* tags. PRs run the
+    # build-pr job (push: false, no cache-to) below.
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
+
+      - name: Log in to GHCR
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5.7.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        uses: docker/bake-action@76cc8060bdff6d632a465001e4cf300684c5472c # v5.7.0
+        with:
+          # `files` paths are resolved relative to the action's working
+          # directory (the repo root after checkout). The bake target's
+          # own `context` controls where the Dockerfile and source files
+          # are read from.
+          files: |
+            website/docker-bake.hcl
+          targets: synapse-website
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  build-pr:
+    name: Build (PR only)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
+
+      - name: Build
+        uses: docker/bake-action@76cc8060bdff6d632a465001e4cf300684c5472c # v5.7.0
+        with:
+          files: |
+            website/docker-bake.hcl
+          # Use the dedicated PR target, which omits `cache-to` because
+          # fork PRs lack permission to write to the GHA cache.
+          targets: synapse-website-pr
+          push: false

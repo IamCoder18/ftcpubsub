@@ -1,0 +1,35 @@
+# Standalone docker compose for the Synapse website. The image is published
+# to GitHub Container Registry from this repo's main branch and from any
+# `v*` tag (see `.github/workflows/docker.yml`).
+#
+# Usage:
+#
+#   docker compose up -d                  # pulls :latest
+#   docker compose pull && docker compose up -d   # refresh
+#
+# Pin a specific version:
+#
+#   SYNAPSE_SITE_IMAGE=ghcr.io/iamcoder18/synapse-website:0.3.1 \
+#     docker compose up -d
+#
+# Verify:
+#
+#   curl http://localhost:8080/healthz   # → ok
+#   open  http://localhost:8080/         # → Synapse home
+#
+# The container serves the static site on port 8080 and answers /healthz
+# with `ok` text plus a 200 status for compose healthchecks.
+
+services:
+  web:
+    image: ${SYNAPSE_SITE_IMAGE:-ghcr.io/iamcoder18/synapse-website:latest}
+    container_name: synapse-website
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
