@@ -40,11 +40,12 @@ export function buildLlmsTxt(pages: PageMarkdown[]): string {
   lines.push('');
   lines.push('## Pages');
   lines.push('');
-  lines.push('- [Home](https://synapse.i-am-coder.dev/)');
-  lines.push('- [Install](https://synapse.i-am-coder.dev/install)');
-  lines.push('- [Changelog](https://synapse.i-am-coder.dev/changelog)');
-  lines.push('- [Community](https://synapse.i-am-coder.dev/community)');
-  lines.push('- [llms-full.txt](https://synapse.i-am-coder.dev/llms-full.txt)');
+  // Use relative URLs so llms.txt works regardless of the deployment host.
+  lines.push('- [Home](/)');
+  lines.push('- [Install](/install)');
+  lines.push('- [Changelog](/changelog)');
+  lines.push('- [Community](/community)');
+  lines.push('- [llms-full.txt](/llms-full.txt)');
   lines.push('');
   return lines.join('\n');
 }

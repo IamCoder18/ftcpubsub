@@ -51,10 +51,11 @@ const groupTitles: Record<string, string> = {
     '@type': 'TechArticle',
     headline: title,
     description: description ?? '',
-    url: new URL(`/docs/${slug}`, Astro.site ?? Astro.url).toString(),
+    // Use relative URLs so JSON-LD is host-agnostic.
+    url: `/docs/${slug}`,
     author: { '@type': 'Person', name: 'IamCoder18', url: 'https://github.com/IamCoder18' },
-    publisher: { '@type': 'Organization', name: 'Synapse', url: 'https://synapse.i-am-coder.dev' },
-    isPartOf: { '@type': 'WebSite', name: 'Synapse', url: 'https://synapse.i-am-coder.dev' },
+    publisher: { '@type': 'Organization', name: 'Synapse', url: '/' },
+    isPartOf: { '@type': 'WebSite', name: 'Synapse', url: '/' },
   }}
 >
   <Nav />

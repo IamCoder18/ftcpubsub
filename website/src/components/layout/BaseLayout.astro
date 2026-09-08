@@ -14,7 +14,11 @@ const { title, description, jsonLd, ogImage = '/og-default.png', canonical } = A
 const siteName = 'Synapse';
 const fullTitle = title === siteName ? title : `${title} — ${siteName}`;
 const desc = description ?? 'A tiny, annotation-driven pub/sub bus for FIRST Tech Challenge robot code.';
-const url = canonical ?? new URL(Astro.url.pathname, Astro.site ?? Astro.url).toString();
+// Use only the path so this site is deployable on any host. Absolute
+// URLs in canonical/og:url would be baked into the static HTML at
+// build time and would hard-code whatever host the build was run on.
+const path = canonical ?? Astro.url.pathname;
+const ogImagePath = ogImage;
 const ldArray = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
 ---
 <!doctype html>
@@ -24,19 +28,19 @@ const ldArray = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{fullTitle}</title>
     <meta name="description" content={desc} />
-    <link rel="canonical" href={url} />
+    <link rel="canonical" href={path} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="generator" content={Astro.generator} />
     <meta property="og:type" content="website" />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={desc} />
-    <meta property="og:url" content={url} />
-    <meta property="og:image" content={new URL(ogImage, Astro.site ?? Astro.url).toString()} />
+    <meta property="og:url" content={path} />
+    <meta property="og:image" content={ogImagePath} />
     <meta property="og:site_name" content={siteName} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={fullTitle} />
     <meta name="twitter:description" content={desc} />
-    <meta name="twitter:image" content={new URL(ogImage, Astro.site ?? Astro.url).toString()} />
+    <meta name="twitter:image" content={ogImagePath} />
     {(() => {
       const p = Astro.url.pathname;
       // Only advertise a markdown mirror for paths with a real per-page .md

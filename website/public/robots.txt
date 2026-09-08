@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://synapse.i-am-coder.dev/sitemap-index.xml
+Sitemap: /sitemap.xml
