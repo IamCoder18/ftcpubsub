@@ -22,7 +22,9 @@ website/dist/
 website/.dockerignore
 
 # Container + workflow tooling
-website/Dockerfile
+# website/Dockerfile must stay in the build context (bake target context='.'
+# and dockerfile='website/Dockerfile'). Re-include it explicitly:
+!website/Dockerfile
 website/docker-compose.yaml
 website/docker-bake.hcl
 website/.env
