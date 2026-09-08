@@ -67,20 +67,21 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=sha,format=short
             type=raw,value=latest,enable={{is_default_branch}}
+          # bake-target makes metadata-action emit a JSON file
+          # (steps.meta.outputs.bake-file) that overrides the same-named
+          # target in docker-bake.hcl with the computed tags + labels.
+          bake-target: synapse-website
 
       - name: Build and push
         uses: docker/bake-action@76cc8060bdff6d632a465001e4cf300684c5472c # v5.7.0
         with:
-          # `files` paths are resolved relative to the action's working
-          # directory (the repo root after checkout). The bake target's
-          # own `context` controls where the Dockerfile and source files
-          # are read from.
+          # The third entry is the metadata-action-generated JSON; it
+          # supplies tags + labels for the 'synapse-website' target.
           files: |
             website/docker-bake.hcl
+            ${{ steps.meta.outputs.bake-file }}
           targets: synapse-website
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
 
   build-pr:
     name: Build (PR only)
