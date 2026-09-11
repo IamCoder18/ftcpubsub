@@ -7,10 +7,21 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.BooleanSupplier;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class TopicTest {
+
+    /** Async callback tests poll every 10 ms for up to 5 s; CI runners can be slow to schedule callback threads. */
+    private static final int POLL_INTERVAL_MS = 10;
+    private static final int AWAIT_BUDGET_MS = 5000;
+
+    /** Waits until {@code cond} is true or the budget elapses. */
+    private static void await(BooleanSupplier cond) throws InterruptedException {
+        long deadline = System.currentTimeMillis() + AWAIT_BUDGET_MS;
+        while (!cond.getAsBoolean() && System.currentTimeMillis() < deadline) Thread.sleep(POLL_INTERVAL_MS);
+    }
 
     private Orchestrator orch;
 
@@ -93,7 +104,7 @@ class TopicTest {
         orch.publish("t", "b");
 
         // Callbacks are async; wait briefly.
-        for (int i = 0; i < 50 && received.size() < 2; i++) Thread.sleep(10);
+        await(() -> received.size() >= 2);
         assertEquals(List.of("a", "b"), received);
     }
 
@@ -104,7 +115,7 @@ class TopicTest {
         Subscription sub = orch.subscribe("t", String.class, received::add);
 
         orch.publish("t", "a");
-        for (int i = 0; i < 50 && received.size() < 1; i++) Thread.sleep(10);
+        await(() -> received.size() >= 1);
         assertEquals(1, received.size());
 
         sub.unsubscribe();
