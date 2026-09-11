@@ -1,0 +1,487 @@
+---
+import '@/styles/redesign.css';
+import { codeToHtml } from 'shiki';
+
+import { highlightJava } from '@/lib/highlight';
+import { QUICKSTART_CODE, PUBSUB_CODE, HARDWARE_CODE } from '@/lib/code-samples';
+
+import { Badge } from '@/components/ui/badge';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { buttonVariants } from '@/components/ui/button';
+
+import { ThemeToggle } from '@/components/redesign/ThemeToggle';
+import { CopyInstall } from '@/components/redesign/CopyInstall';
+import { CodeTabs } from '@/components/redesign/CodeTabs';
+import { Faq } from '@/components/redesign/Faq';
+import { PilotForm } from '@/components/redesign/PilotForm';
+import { TelemetryMock } from '@/components/redesign/TelemetryMock';
+import { SynapseGraph } from '@/components/redesign/SynapseGraph';
+
+import {
+  Braces,
+  Cpu,
+  Gamepad2,
+  Package,
+  ShieldCheck,
+  Star,
+  TriangleAlert,
+  Waves,
+  ArrowRight,
+  Zap,
+} from 'lucide-react';
+
+const samples = [
+  { id: 'quickstart', label: 'Quickstart', file: 'SynapseDemo.java' },
+  { id: 'pubsub', label: 'Pub/sub', file: 'IntakeNode.java' },
+  { id: 'hardware', label: 'Hardware thread', file: 'Hardware.java' },
+].map((s, i) => ({
+  ...s,
+  html: highlightJava([QUICKSTART_CODE, PUBSUB_CODE, HARDWARE_CODE][i]),
+}));
+
+const stats = [
+  { value: '40 KB', label: 'JAR, minified' },
+  { value: '0', label: 'runtime dependencies' },
+  { value: '4', label: 'threaded architecture' },
+  { value: '60 Hz', label: 'gamepad-to-topic input' },
+];
+
+const features = [
+  {
+    icon: Cpu,
+    title: 'One hardware thread, no exceptions',
+    body: 'Every motor write, servo command, and sensor read funnels through a single dedicated thread. A runtime assertion fails fast if you touch hardware from anywhere else.',
+  },
+  {
+    icon: Braces,
+    title: 'Three-layer API',
+    body: 'Annotations, a HardwareActions facade, and SafeDevice<T> wrappers. Pick the style that fits your team — they all serialize onto the same safe path.',
+  },
+  {
+    icon: Waves,
+    title: 'Backpressure that respects deadlines',
+    body: 'Separate pools for periodic and callback work with bounded queues. A slow subscriber slows its publisher — it never starves your control loop.',
+  },
+  {
+    icon: Gamepad2,
+    title: 'Gamepad to topics in one line',
+    body: 'GamepadAdaptor.attach() publishes buttons, edges, and axes at 60 Hz. Bind an intake to a rising edge in two lines of annotation.',
+  },
+  {
+    icon: ShieldCheck,
+    title: 'R8-minify-safe, verified',
+    body: 'The entire test suite runs through minification, so the release JAR survives the FTC robot controller build without surprises.',
+  },
+  {
+    icon: Package,
+    title: '40 KB, zero dependencies',
+    body: 'One Gradle line drops it into build.dependencies.gradle. No transitive jars, no version conflicts with the SDK.',
+  },
+];
+
+const pools = [
+  { pool: 'Scheduler', threads: '8', bounded: '—', used: '@RunPeriodically loops' },
+  { pool: 'Callback', threads: '4–16', bounded: '256', used: '@SubscribedTo handlers' },
+  { pool: 'Action', threads: 'unbounded', bounded: 'no', used: '@RunnableAction invocations' },
+  { pool: 'Hardware', threads: '1 (dedicated)', bounded: '—', used: 'All hardware reads/writes' },
+];
+
+const footerCols = [
+  {
+    heading: 'Product',
+    links: ['Features', 'Installation', 'Changelog', 'Roadmap'],
+  },
+  {
+    heading: 'Docs',
+    links: ['Quickstart', 'Concepts', 'API reference', 'Recipes'],
+  },
+  {
+    heading: 'Community',
+    links: ['GitHub', 'Discord', 'Contributing', 'Code of conduct'],
+  },
+];
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Synapse — Robot code that thinks in signals</title>
+    <meta
+      name="description"
+      content="A tiny, annotation-driven pub/sub bus for FTC robot code. 40 KB. Zero dependencies. One hardware thread."
+    />
+    <script is:inline>
+      try {
+        if (localStorage.getItem('syn-theme') === 'dark')
+          document.documentElement.classList.add('dark');
+      } catch {}
+    </script>
+  </head>
+  <body class="min-h-dvh overflow-x-hidden">
+    <!-- ================= NAV ================= -->
+    <header
+      class="sticky top-0 z-50 w-full border-b border-border/60 bg-background/70 backdrop-blur-xl"
+    >
+      <div class="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+        <a href="#" class="flex items-center gap-2.5">
+          <span class="relative flex size-8 items-center justify-center rounded-lg bg-primary/15">
+            <span class="absolute size-2.5 rounded-full bg-primary shadow-[0_0_12px_var(--glow-soft)]"></span>
+            <span class="absolute size-5 rounded-full border border-primary/40"></span>
+          </span>
+          <span class="font-display text-lg font-semibold tracking-tight">Synapse</span>
+          <span
+            class="ml-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-0.5 font-mono text-[10px] font-medium text-primary shadow-[0_0_14px_-2px_var(--glow-soft)]"
+          >
+            v0.3.1
+          </span>
+        </a>
+        <nav class="hidden items-center gap-1 md:flex">
+          <a href="#features" class="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Features</a>
+          <a href="#code" class="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Code</a>
+          <a href="#threading" class="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Threading</a>
+          <a href="#faq" class="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">FAQ</a>
+        </nav>
+        <div class="flex items-center gap-2">
+          <ThemeToggle client:load />
+          <a href="#" class={buttonVariants({ variant: 'outline', size: 'sm' })}>GitHub</a>
+          <a href="#cta" class={buttonVariants({ size: 'sm' })}>Get started</a>
+        </div>
+      </div>
+    </header>
+
+    <!-- ================= HERO ================= -->
+    <section class="relative">
+      <div class="grid-bg pointer-events-none absolute inset-0"></div>
+      <div
+        class="pointer-events-none absolute -top-32 left-1/2 h-[480px] w-[760px] -translate-x-1/2 rounded-full opacity-60 blur-3xl"
+        style="background: radial-gradient(closest-side, var(--glow-soft), transparent)"
+      >
+      </div>
+
+      <div class="relative mx-auto max-w-6xl px-6 pt-20 pb-16">
+        <!-- copy -->
+        <div class="mx-auto grid max-w-3xl justify-items-center gap-6 text-center">
+          <Badge variant="outline" className="gap-2 border-primary/40 bg-background px-3 py-1 text-primary shadow-[0_0_16px_-4px_var(--glow-soft)]">
+            <Zap className="size-3.5" />
+            New — bulk reads on the hardware thread
+          </Badge>
+          <h1 class="font-display text-5xl leading-[1.05] font-bold tracking-tight sm:text-6xl">
+            Robot code that <span class="text-signal">thinks in signals</span>
+          </h1>
+          <p class="max-w-xl text-lg text-muted-foreground">
+            Synapse is a tiny, annotation-driven pub/sub bus for
+            <strong class="font-medium text-foreground">FIRST</strong> Tech
+            Challenge robots. Nodes talk over named, typed topics while one
+            dedicated thread keeps every hardware touch safe.
+          </p>
+          <div class="flex flex-wrap items-center justify-center gap-3">
+            <a href="#install" class={buttonVariants({ size: 'lg' })}>
+              Get started <ArrowRight className="size-4" />
+            </a>
+            <a href="#" class={buttonVariants({ size: 'lg', variant: 'outline' })}>
+              <Star className="size-4" /> Star on GitHub
+            </a>
+          </div>
+          <p class="text-xs text-muted-foreground">
+            MIT licensed · 40 KB JAR · zero runtime dependencies
+          </p>
+        </div>
+
+        <!-- interactive pub/sub console -->
+        <div id="install" class="relative mx-auto mt-14 max-w-4xl scroll-mt-24">
+          <div
+            class="pointer-events-none absolute -inset-8 rounded-full opacity-70 blur-3xl"
+            style="background: radial-gradient(closest-side, var(--glow-soft), transparent)"
+          >
+          </div>
+          <div class="relative">
+            <SynapseGraph client:visible />
+          </div>
+
+          <!-- in the field -->
+          <div id="field" class="mt-6 flex justify-center scroll-mt-24">
+            <p
+              class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 rounded-full border border-border bg-card px-6 py-2.5 text-sm text-muted-foreground shadow-sm"
+            >
+              <span class="flex items-center gap-1.5 font-mono text-[11px] font-semibold tracking-wide text-primary uppercase">
+                <span class="size-1.5 rounded-full bg-primary shadow-[0_0_8px_var(--glow-soft)]"></span>
+                In the field
+              </span>
+              <span>
+                Synapse runs the robot code of
+                <strong class="font-medium text-foreground">FTC Team 23684 · Tech Titans</strong>
+              </span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= STATS ================= -->
+    <section id="stats" class="border-y border-border/60 bg-card/40">
+      <div class="mx-auto grid max-w-6xl grid-cols-2 gap-8 px-6 py-10 sm:grid-cols-4">
+        {stats.map((s) => (
+          <div class="text-center sm:text-left">
+            <p class="font-display text-3xl font-bold text-primary">{s.value}</p>
+            <p class="mt-1 text-sm text-muted-foreground">{s.label}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- ================= FEATURES ================= -->
+    <section id="features" class="mx-auto max-w-6xl px-6 py-24">
+      <div class="mx-auto max-w-2xl text-center">
+        <Badge variant="secondary">Why Synapse</Badge>
+        <h2 class="mt-4 font-display text-3xl font-bold tracking-tight sm:text-4xl">
+          Safest and smallest, by design
+        </h2>
+        <p class="mt-3 text-muted-foreground">
+          Purpose-built for FTC: fast enough for a 50 Hz drivetrain, strict
+          enough to protect your I²C bus.
+        </p>
+      </div>
+      <div class="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {features.map((f) => (
+          <Card className="glow-card group transition-colors hover:border-primary/30">
+            <CardHeader>
+              <div class="mb-1 flex size-10 items-center justify-center rounded-lg bg-primary/12 text-primary transition-colors group-hover:bg-primary/20">
+                <f.icon className="size-5" />
+              </div>
+              <CardTitle className="text-base">{f.title}</CardTitle>
+              <CardDescription>{f.body}</CardDescription>
+            </CardHeader>
+          </Card>
+        ))}
+      </div>
+    </section>
+
+    <!-- ================= CODE ================= -->
+    <section id="code" class="border-y border-border/60 bg-muted/30">
+      <div class="mx-auto grid max-w-6xl items-center gap-12 px-6 py-24 lg:grid-cols-2">
+        <div class="grid gap-5">
+          <Badge variant="secondary" className="w-fit">Developer experience</Badge>
+          <h2 class="font-display text-3xl font-bold tracking-tight sm:text-4xl">
+            Declare intent. Let the bus do the wiring.
+          </h2>
+          <p class="text-muted-foreground">
+            Annotate a method and Synapse wires it to the topic, the thread
+            pool, and the hardware thread — no manual tick counting, no
+            references between subsystems.
+          </p>
+          <ul class="mt-2 grid gap-3 text-sm">
+            <li class="flex items-start gap-3">
+              <span class="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary"></span>
+              <span><code class="font-mono text-primary">@SubscribedTo</code> callbacks fire the instant a value publishes.</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary"></span>
+              <span><code class="font-mono text-primary">@RunPeriodically(hz = 50)</code> loops never drift with the main OpMode loop.</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary"></span>
+              <span><code class="font-mono text-primary">@OnHardwareThread</code> hops any callback onto the only thread allowed to touch hardware.</span>
+            </li>
+          </ul>
+        </div>
+        <CodeTabs client:visible samples={samples} />
+      </div>
+    </section>
+
+    <!-- ================= TELEMETRY ================= -->
+    <section class="mx-auto max-w-6xl px-6 py-24">
+      <div class="mx-auto max-w-2xl text-center">
+        <Badge variant="secondary">Observability</Badge>
+        <h2 class="mt-4 font-display text-3xl font-bold tracking-tight sm:text-4xl">
+          Watch every topic from one panel
+        </h2>
+        <p class="mt-3 text-muted-foreground">
+          Named, typed topics mean your telemetry is a live map of the robot,
+          not a pile of print statements.
+        </p>
+      </div>
+      <div class="mx-auto mt-12 max-w-xl">
+        <TelemetryMock client:visible />
+      </div>
+    </section>
+
+    <!-- ================= THREADING ================= -->
+    <section id="threading" class="border-y border-border/60 bg-muted/30">
+      <div class="mx-auto max-w-6xl px-6 py-24">
+        <div class="mx-auto max-w-2xl text-center">
+          <Badge variant="secondary">Threading model</Badge>
+          <h2 class="mt-4 font-display text-3xl font-bold tracking-tight sm:text-4xl">
+            Four pools, each with a job
+          </h2>
+          <p class="mt-3 text-muted-foreground">
+            Slow callbacks cannot starve periodic loops. Slow periodic loops
+            cannot starve hardware writes.
+          </p>
+        </div>
+
+        <div class="mt-10 overflow-hidden rounded-xl border border-border bg-card">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="pl-6">Pool</TableHead>
+                <TableHead>Threads</TableHead>
+                <TableHead>Bounded</TableHead>
+                <TableHead className="pr-6">Used for</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {pools.map((p) => (
+                <TableRow>
+                  <TableCell className="pl-6 font-medium">{p.pool}</TableCell>
+                  <TableCell className="font-mono text-muted-foreground">{p.threads}</TableCell>
+                  <TableCell className="font-mono text-muted-foreground">{p.bounded}</TableCell>
+                  <TableCell className="pr-6 text-muted-foreground">{p.used}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+
+        <Alert className="mt-8 border-l-2 border-l-primary bg-card">
+          <TriangleAlert className="size-4 text-muted-foreground" />
+          <AlertTitle className="text-foreground">FTC hardware is not thread-safe</AlertTitle>
+          <AlertDescription className="text-muted-foreground">
+            Calling <code class="font-mono">setPower</code> or reading a sensor
+            from two threads at once can garble serial-bus responses or crash
+            deep in the SDK. Synapse makes off-thread hardware access fail
+            fast — never silently.
+          </AlertDescription>
+        </Alert>
+      </div>
+    </section>
+
+    <!-- ================= PILOT + FAQ ================= -->
+    <section id="faq" class="mx-auto max-w-6xl px-6 py-24">
+      <div class="grid gap-14 lg:grid-cols-2">
+        <div class="grid gap-6">
+          <Badge variant="secondary" className="w-fit">Feedback</Badge>
+          <h2 class="font-display text-3xl font-bold tracking-tight">
+            Share your experience
+          </h2>
+          <p class="-mt-2 text-muted-foreground">
+            Running Synapse in an OpMode? Tell us what's working and what's
+            grinding your gears — it directly shapes the roadmap.
+          </p>
+          <Card>
+            <CardContent>
+              <PilotForm client:visible />
+            </CardContent>
+          </Card>
+        </div>
+        <div class="grid content-start gap-6">
+          <Badge variant="secondary" className="w-fit">FAQ</Badge>
+          <h2 class="font-display text-3xl font-bold tracking-tight">
+            Questions teams ask first
+          </h2>
+          <Faq client:visible />
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= CTA ================= -->
+    <section id="cta" class="mx-auto max-w-6xl scroll-mt-16 px-6 pb-24">
+      <div
+        class="glow-card relative overflow-hidden rounded-3xl border border-primary/25 bg-primary/10 px-8 py-16 text-center"
+      >
+        <div
+          class="pointer-events-none absolute inset-0 opacity-70"
+          style="background: radial-gradient(60% 90% at 50% 0%, var(--glow-soft), transparent)"
+        >
+        </div>
+        <div class="relative mx-auto grid max-w-2xl justify-items-center gap-6">
+          <h2 class="font-display text-3xl font-bold tracking-tight sm:text-4xl">
+            Ship safer robot code this season
+          </h2>
+          <p class="text-muted-foreground">
+            One dependency line. One hardware thread. No surprises at the
+            competition table.
+          </p>
+          <div class="w-full max-w-lg">
+            <CopyInstall client:visible cmd='implementation "com.aaravlabs:synapse:0.3.1"' />
+          </div>
+          <div class="flex flex-wrap justify-center gap-3">
+            <a href="#" class={buttonVariants({ size: 'lg' })}>
+              Read the docs <ArrowRight className="size-4" />
+            </a>
+            <a href="#" class={buttonVariants({ size: 'lg', variant: 'ghost' })}>
+              Browse recipes
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= FOOTER ================= -->
+    <footer class="relative border-t border-border/60 bg-card/40">
+      <div class="h-px w-full bg-gradient-to-r from-primary/60 via-primary/15 to-transparent"></div>
+      <div class="mx-auto max-w-6xl px-6 py-16">
+        <div class="grid gap-12 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
+          <div class="grid content-start justify-items-start gap-4">
+            <a href="#" class="flex items-center gap-2.5">
+              <span class="relative flex size-8 items-center justify-center rounded-lg bg-primary/15">
+                <span class="absolute size-2.5 rounded-full bg-primary shadow-[0_0_12px_var(--glow-soft)]"></span>
+                <span class="absolute size-5 rounded-full border border-primary/40"></span>
+              </span>
+              <span class="font-display text-lg font-semibold tracking-tight">Synapse</span>
+            </a>
+            <p class="max-w-sm text-sm leading-relaxed text-muted-foreground">
+              A tiny, annotation-driven pub/sub bus for FIRST Tech Challenge
+              robot code. One hardware thread, zero compromises.
+            </p>
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="rounded-full border border-primary/40 bg-primary/10 px-2.5 py-0.5 font-mono text-[10px] font-medium text-primary">MIT</span>
+              <span class="rounded-full border border-primary/40 bg-primary/10 px-2.5 py-0.5 font-mono text-[10px] font-medium text-primary">40 KB</span>
+              <span class="rounded-full border border-primary/40 bg-primary/10 px-2.5 py-0.5 font-mono text-[10px] font-medium text-primary">v0.3.1</span>
+            </div>
+          </div>
+          {footerCols.map((col) => (
+            <div>
+              <p class="font-mono text-[11px] font-semibold tracking-widest text-primary uppercase">
+                {col.heading}
+              </p>
+              <ul class="mt-4 grid gap-2.5 text-sm text-muted-foreground">
+                {col.links.map((l) => (
+                  <li>
+                    <a class="transition-colors hover:text-primary" href="#">{l}</a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+        <Separator class="mt-14" />
+        <div class="flex flex-wrap items-center justify-between gap-4 pt-8 text-xs text-muted-foreground">
+          <p>© 2026 Synapse · Released under the MIT License</p>
+          <p>
+            Used by
+            <a href="#" class="font-medium text-foreground transition-colors hover:text-primary">
+              FTC Team 23684 · Tech Titans
+            </a>
+          </p>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
