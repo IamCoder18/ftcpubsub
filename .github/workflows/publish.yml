@@ -35,7 +35,7 @@ jobs:
           path: build/reports/tests/test/
 
   publish:
-    name: Publish to GitHub Packages
+    name: Publish
     runs-on: ubuntu-latest
     # Tag pushes can't depend on the separate Test workflow, so tests are
     # re-run here and the publish job is gated on them succeeding.
@@ -53,8 +53,24 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Publish
+      - name: Import GPG key
+        # Required for signing artifacts published to Maven Central. The key is
+        # provided as a GitHub Actions secret (GPG_PRIVATE_KEY) and never written
+        # to disk outside GnuPG's own keyring.
+        run: gpg --batch --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --import <<< "$GPG_PRIVATE_KEY"
+
+      - name: Publish to GitHub Packages
         run: gradle --no-daemon publishMavenPublicationToGitHubPackagesRepository
         env:
           GITHUB_USER: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to Maven Central
+        # Uploads to the Sonatype OSSRH staging repo at s01.oss.sonatype.org,
+        # then closes & releases it so artifacts sync to Maven Central.
+        run: gradle --no-daemon publishToSonatype closeAndReleaseSonatypeStagingRepository
+        env:
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          SIGNING_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          SIGNING_PASSWORD: ${{ secrets.GPG_PASSPHRASE }}

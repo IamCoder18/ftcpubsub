@@ -320,6 +320,24 @@ githubToken=ghp_your_token_here
 
 The token only needs `read:packages` scope.
 
+### Maven Central
+
+`com.aaravlabs:synapse` is also published to Maven Central, so no extra
+configuration is needed:
+
+```gradle
+repositories {
+    mavenCentral()
+}
+dependencies {
+    implementation 'com.aaravlabs:synapse:0.3.1'
+}
+```
+
+Releases are cut by pushing a `v*` tag; GitHub Actions signs the artifacts
+with GPG and pushes them through Sonatype OSSRH (`s01.oss.sonatype.org`)
+where they sync to Maven Central within ~30 minutes.
+
 ## API reference
 
 | Type | Where | Purpose |
