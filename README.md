@@ -330,13 +330,15 @@ repositories {
     mavenCentral()
 }
 dependencies {
-    implementation 'com.aaravlabs:synapse:0.3.1'
+    // Use the latest release: https://github.com/IamCoder18/synapse/releases
+    implementation 'com.aaravlabs:synapse:<version>'
 }
 ```
 
 Releases are cut by pushing a `v*` tag; GitHub Actions signs the artifacts
-with GPG and pushes them through Sonatype OSSRH (`s01.oss.sonatype.org`)
-where they sync to Maven Central within ~30 minutes.
+with GPG, uploads them to the Sonatype Central staging API, and then closes &
+releases the staging repository. Artifacts appear on Maven Central within
+~10–30 minutes of release.
 
 ## API reference
 

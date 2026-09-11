@@ -53,12 +53,6 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Import GPG key
-        # Required for signing artifacts published to Maven Central. The key is
-        # provided as a GitHub Actions secret (GPG_PRIVATE_KEY) and never written
-        # to disk outside GnuPG's own keyring.
-        run: gpg --batch --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --import <<< "$GPG_PRIVATE_KEY"
-
       - name: Publish to GitHub Packages
         run: gradle --no-daemon publishMavenPublicationToGitHubPackagesRepository
         env:
