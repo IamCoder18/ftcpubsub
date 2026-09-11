@@ -6,15 +6,41 @@ import { loadChangelog } from '~/lib/changelog';
 
 const releases = loadChangelog();
 
-// Bullets are raw markdown lines. Escape HTML, then render the two inline
-// constructs CHANGELOG.md actually uses: **bold** and `code`.
-const inline = (s: string) =>
-  s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/`([^`]+?)`/g, '<code>$1</code>');
+// Bullets are raw markdown lines. Tokenize the two inline constructs
+// CHANGELOG.md actually uses — **bold** and `code` — into segments rendered
+// as real elements. Unmatched markers stay literal text, and since output is
+// text nodes, arbitrary HTML in a bullet can never reach the DOM.
+interface InlineToken {
+  text: string;
+  bold?: boolean;
+  code?: boolean;
+}
+
+function tokenizeInline(s: string): InlineToken[] {
+  const tokens: InlineToken[] = [];
+  let rest = s;
+  while (rest) {
+    const bi = rest.indexOf('**');
+    const ci = rest.indexOf('`');
+    if (bi === -1 && ci === -1) break;
+    const useBold = bi !== -1 && (ci === -1 || bi < ci);
+    if (useBold) {
+      const end = rest.indexOf('**', bi + 2);
+      if (end === -1) break;
+      if (bi > 0) tokens.push({ text: rest.slice(0, bi) });
+      tokens.push({ text: rest.slice(bi + 2, end), bold: true });
+      rest = rest.slice(end + 2);
+    } else {
+      const end = rest.indexOf('`', ci + 1);
+      if (end === -1) break;
+      if (ci > 0) tokens.push({ text: rest.slice(0, ci) });
+      tokens.push({ text: rest.slice(ci + 1, end), code: true });
+      rest = rest.slice(end + 1);
+    }
+  }
+  if (rest) tokens.push({ text: rest });
+  return tokens;
+}
 ---
 <BaseLayout
   title="Changelog"
@@ -39,7 +65,13 @@ const inline = (s: string) =>
           <section>
             <h3>{s.type[0].toUpperCase()}{s.type.slice(1)}</h3>
             <ul role="list">
-              {s.bullets.map((b) => <li set:html={inline(b)} />)}
+              {s.bullets.map((b) => (
+                <li>
+                  {tokenizeInline(b).map((t) =>
+                    t.bold ? <strong>{t.text}</strong> : t.code ? <code>{t.text}</code> : t.text,
+                  )}
+                </li>
+              ))}
             </ul>
           </section>
         ))}
@@ -54,7 +86,7 @@ const inline = (s: string) =>
   .cl__head { text-align: center; margin-bottom: 3rem; }
   .cl__head h1 { font-size: clamp(2.4rem, 6vw, 3.4rem); margin: 0; }
   .cl__head p { color: var(--muted-foreground); margin-top: 0.6rem; }
-  .cl__head a { color: var(--primary); }
+  .cl__head a { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
   .cl__rel { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem 1.8rem; margin-bottom: 1.5rem; }
   .cl__rel--latest { border-color: color-mix(in oklab, var(--primary) 45%, transparent); }
   .cl__pill {

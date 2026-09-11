@@ -165,6 +165,11 @@ const groupTitles: Record<string, string> = {
     }
     .docs-article :global(p) { line-height: 1.7; }
     .docs-article :global(a) { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
+    .docs-article :global(.docs-edit a) {
+      color: var(--muted-foreground);
+      text-decoration: none;
+    }
+    .docs-article :global(.docs-edit a:hover) { color: var(--foreground); }
     .docs-article :global(code) {
       font-family: var(--font-mono);
       background: var(--muted);
