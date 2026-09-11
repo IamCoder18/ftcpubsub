@@ -144,16 +144,19 @@ public class MyFirstOpMode extends SafeOpMode {
 
 <style>
   .install { max-width: 880px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+  .install a { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
   .install__hero { text-align: center; margin-bottom: 3rem; }
   .install__hero h1 { font-size: clamp(2.4rem, 6vw, 3.4rem); margin: 0; }
-  .install__hero p { color: var(--text-muted); margin-top: 0.7rem; }
+  .install__hero p { color: var(--muted-foreground); margin-top: 0.7rem; }
   .install__step { margin-bottom: 2.5rem; }
   .install__step h2 { font-size: 1.4rem; margin: 0 0 0.5rem; }
-  .install__hint { color: var(--text-muted); margin-bottom: 0.9rem; }
-  pre { background: var(--code-bg); border: 1px solid var(--border); padding: 1rem; border-radius: 8px; overflow: auto; }
-  code { font-family: var(--font-mono); }
+  .install__hint { color: var(--muted-foreground); margin-bottom: 0.9rem; }
+  pre { background: var(--muted); border: 1px solid var(--border); padding: 1rem; border-radius: 8px; overflow: auto; }
+  code { font-family: var(--font-mono); font-size: 0.9em; }
+  p code, h2 code, li code { background: var(--muted); padding: 0.15em 0.4em; border-radius: 4px; }
+  pre code { background: transparent; padding: 0; }
   .install__tabs details {
-    background: var(--surface-1);
+    background: var(--card);
     border: 1px solid var(--border);
     border-radius: 8px;
     margin-bottom: 0.5rem;
@@ -162,9 +165,9 @@ public class MyFirstOpMode extends SafeOpMode {
   .install__tabs summary {
     padding: 0.7rem 1rem;
     cursor: pointer;
-    color: var(--text);
+    color: var(--foreground);
     font-weight: 500;
   }
-  .install__tabs summary:hover { background: var(--surface-2); }
+  .install__tabs summary:hover { background: var(--muted); }
   .install__tabs pre { border: none; border-top: 1px solid var(--border); border-radius: 0; margin: 0; }
 </style>
