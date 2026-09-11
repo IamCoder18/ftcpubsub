@@ -12,6 +12,7 @@ import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 import {
   Tooltip,
   TooltipContent,
@@ -48,7 +49,13 @@ export function TelemetryMock() {
               </CardTitle>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Info className="size-3.5 text-muted-foreground" />
+                  <button
+                    type="button"
+                    aria-label="About this panel"
+                    className="rounded-sm text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
+                  >
+                    <Info className="size-3.5" aria-hidden />
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent>
                   Simulated view of a running robot bus
@@ -85,11 +92,14 @@ export function TelemetryMock() {
           <Separator className="my-1" />
 
           <div className="flex items-center justify-between gap-4">
-            <span className="flex items-center gap-2 text-sm">
-              <Radio className="size-4 text-primary" />
-              Hardware-thread lock
-            </span>
-            <Switch checked={live} onCheckedChange={setLive} />
+            <Label
+              htmlFor="telemetry-live-toggle"
+              className="flex items-center gap-2 text-sm font-normal"
+            >
+              <Radio className="size-4 text-primary" aria-hidden />
+              Live telemetry
+            </Label>
+            <Switch id="telemetry-live-toggle" checked={live} onCheckedChange={setLive} />
           </div>
 
           <div className="flex items-center justify-between gap-4">
@@ -98,7 +108,13 @@ export function TelemetryMock() {
               Backpressure
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Info className="size-3.5 text-muted-foreground" />
+                  <button
+                    type="button"
+                    aria-label="About backpressure"
+                    className="rounded-sm text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
+                  >
+                    <Info className="size-3.5" aria-hidden />
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent>
                   Callback pool: bounded 256, CallerRunsPolicy

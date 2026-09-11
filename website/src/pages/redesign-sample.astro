@@ -102,18 +102,35 @@ const pools = [
   { pool: 'Hardware', threads: '1 (dedicated)', bounded: '—', used: 'All hardware reads/writes' },
 ];
 
+const REPO = 'https://github.com/IamCoder18/synapse';
+
 const footerCols = [
   {
     heading: 'Product',
-    links: ['Features', 'Installation', 'Changelog', 'Roadmap'],
+    links: [
+      { label: 'Features', href: '#features' },
+      { label: 'Installation', href: '#install' },
+      { label: 'Changelog', href: `${REPO}/blob/main/CHANGELOG.md` },
+      { label: 'Roadmap', href: null },
+    ],
   },
   {
     heading: 'Docs',
-    links: ['Quickstart', 'Concepts', 'API reference', 'Recipes'],
+    links: [
+      { label: 'Quickstart', href: '#code' },
+      { label: 'Concepts', href: '#threading' },
+      { label: 'API reference', href: null },
+      { label: 'Recipes', href: null },
+    ],
   },
   {
     heading: 'Community',
-    links: ['GitHub', 'Discord', 'Contributing', 'Code of conduct'],
+    links: [
+      { label: 'GitHub', href: REPO },
+      { label: 'Discord', href: null },
+      { label: 'Contributing', href: `${REPO}/blob/main/CONTRIBUTING.md` },
+      { label: 'Code of conduct', href: `${REPO}/blob/main/CODE_OF_CONDUCT.md` },
+    ],
   },
 ];
 ---
@@ -160,7 +177,14 @@ const footerCols = [
         </nav>
         <div class="flex items-center gap-2">
           <ThemeToggle client:load />
-          <a href="#" class={buttonVariants({ variant: 'outline', size: 'sm' })}>GitHub</a>
+          <a
+            href={REPO}
+            target="_blank"
+            rel="noopener noreferrer"
+            class={buttonVariants({ variant: 'outline', size: 'sm' })}
+          >
+            GitHub
+          </a>
           <a href="#cta" class={buttonVariants({ size: 'sm' })}>Get started</a>
         </div>
       </div>
@@ -195,7 +219,12 @@ const footerCols = [
             <a href="#install" class={buttonVariants({ size: 'lg' })}>
               Get started <ArrowRight className="size-4" />
             </a>
-            <a href="#" class={buttonVariants({ size: 'lg', variant: 'outline' })}>
+            <a
+              href={REPO}
+              target="_blank"
+              rel="noopener noreferrer"
+              class={buttonVariants({ size: 'lg', variant: 'outline' })}
+            >
               <Star className="size-4" /> Star on GitHub
             </a>
           </div>
@@ -205,7 +234,7 @@ const footerCols = [
         </div>
 
         <!-- interactive pub/sub console -->
-        <div id="install" class="relative mx-auto mt-14 max-w-4xl scroll-mt-24">
+        <div class="relative mx-auto mt-14 max-w-4xl scroll-mt-24">
           <div
             class="pointer-events-none absolute -inset-8 rounded-full opacity-70 blur-3xl"
             style="background: radial-gradient(closest-side, var(--glow-soft), transparent)"
@@ -418,17 +447,17 @@ const footerCols = [
             One dependency line. One hardware thread. No surprises at the
             competition table.
           </p>
-          <div class="w-full max-w-lg">
+          <div id="install" class="w-full max-w-lg scroll-mt-24">
             <CopyInstall client:visible cmd='implementation "com.aaravlabs:synapse:0.3.1"' />
           </div>
-          <div class="flex flex-wrap justify-center gap-3">
-            <a href="#" class={buttonVariants({ size: 'lg' })}>
-              Read the docs <ArrowRight className="size-4" />
-            </a>
-            <a href="#" class={buttonVariants({ size: 'lg', variant: 'ghost' })}>
-              Browse recipes
-            </a>
-          </div>
+          <a
+            href={`${REPO}#readme`}
+            target="_blank"
+            rel="noopener noreferrer"
+            class={buttonVariants({ size: 'lg' })}
+          >
+            Read the docs <ArrowRight className="size-4" />
+          </a>
         </div>
       </div>
     </section>
@@ -464,7 +493,18 @@ const footerCols = [
               <ul class="mt-4 grid gap-2.5 text-sm text-muted-foreground">
                 {col.links.map((l) => (
                   <li>
-                    <a class="transition-colors hover:text-primary" href="#">{l}</a>
+                    {l.href ? (
+                      <a
+                        class="transition-colors hover:text-primary"
+                        href={l.href}
+                        target={l.href.startsWith('http') ? '_blank' : undefined}
+                        rel={l.href.startsWith('http') ? 'noopener noreferrer' : undefined}
+                      >
+                        {l.label}
+                      </a>
+                    ) : (
+                      <span class="text-muted-foreground/60">{l.label}</span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -476,9 +516,9 @@ const footerCols = [
           <p>© 2026 Synapse · Released under the MIT License</p>
           <p>
             Used by
-            <a href="#" class="font-medium text-foreground transition-colors hover:text-primary">
+            <span class="font-medium text-foreground">
               FTC Team 23684 · Tech Titans
-            </a>
+            </span>
           </p>
         </div>
       </div>

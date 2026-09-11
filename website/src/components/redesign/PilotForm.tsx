@@ -11,6 +11,7 @@ export function PilotForm() {
   const [name, setName] = useState("")
   const [team, setTeam] = useState("")
   const [experience, setExperience] = useState("")
+  const [openFailed, setOpenFailed] = useState(false)
 
   function issueUrl() {
     const params = new URLSearchParams({
@@ -25,7 +26,9 @@ export function PilotForm() {
 
   function submit(e: FormEvent) {
     e.preventDefault()
-    window.open(issueUrl(), "_blank", "noopener")
+    setOpenFailed(false)
+    const win = window.open(issueUrl(), "_blank", "noopener")
+    if (!win) setOpenFailed(true)
   }
 
   return (
@@ -59,6 +62,7 @@ export function PilotForm() {
         <Textarea
           id="pilot-about"
           required
+          maxLength={2000}
           placeholder="The good, the broken, and the missing..."
           className="min-h-24"
           value={experience}
@@ -75,6 +79,20 @@ export function PilotForm() {
           needed.
         </p>
       </div>
+      {openFailed && (
+        <p className="text-xs text-destructive" role="alert">
+          Your browser blocked the pop-up.{" "}
+          <a
+            href={issueUrl()}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium underline underline-offset-2"
+          >
+            Open the issue form here
+          </a>{" "}
+          instead.
+        </p>
+      )}
     </form>
   )
 }

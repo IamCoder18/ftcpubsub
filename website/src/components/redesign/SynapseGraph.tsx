@@ -86,8 +86,6 @@ interface LogEntry {
   value: string
 }
 
-let seq = 0
-
 export function SynapseGraph() {
   const [pulses, setPulses] = useState<Pulse[]>([])
   const [flashes, setFlashes] = useState<Set<string>>(new Set())
@@ -97,7 +95,8 @@ export function SynapseGraph() {
   const [ledOn, setLedOn] = useState(false)
   const [drivePower, setDrivePower] = useState(0)
   const [heading, setHeading] = useState(42)
-  const touched = useRef(false)
+  const seq = useRef(0)
+  const headingRef = useRef(42)
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
   const t0 = useRef<number>(0)
 
@@ -109,19 +108,20 @@ export function SynapseGraph() {
 
   const pushLog = useCallback((topic: string, value: string) => {
     const t = ((performance.now() - t0.current) / 1000).toFixed(1)
-    setLog((l) => [{ key: ++seq, t: `T+${t}s`, topic, value }, ...l].slice(0, 4))
+    setLog((l) => [{ key: ++seq.current, t: `T+${t}s`, topic, value }, ...l].slice(0, 4))
   }, [])
 
   const fire = useCallback(
-    (src: SourceId, auto = false) => {
-      if (!auto) touched.current = true
+    (src: SourceId) => {
       setMessages((m) => m + 1)
 
-      setPulses((p) => [...p, { key: ++seq, path: EDGES_TO_HUB[src].d, born: Date.now() }])
+      setPulses((p) => [...p, { key: ++seq.current, path: EDGES_TO_HUB[src].d, born: Date.now() }])
 
       if (src === "imu") {
         later(() => {
-          const h = Math.round((heading + 3 + Math.random() * 5) * 10) / 10
+          const h =
+            Math.round(((headingRef.current + 3 + Math.random() * 5) % 360) * 10) / 10
+          headingRef.current = h
           setHeading(h)
           pushLog(EDGES_TO_HUB.imu.label, `${h.toFixed(1)}°`)
         }, 560)
@@ -129,7 +129,7 @@ export function SynapseGraph() {
 
       ROUTING[src].forEach((t, i) => {
         later(() => {
-          setPulses((p) => [...p, { key: ++seq, path: EDGES_FROM_HUB[t].d, born: Date.now() }])
+          setPulses((p) => [...p, { key: ++seq.current, path: EDGES_FROM_HUB[t].d, born: Date.now() }])
           later(() => {
             setFlashes((f) => new Set(f).add(t))
             if (t === "intake") {
@@ -160,7 +160,7 @@ export function SynapseGraph() {
 
       later(() => setPulses((p) => p.filter((x) => Date.now() - x.born < 1300)), 1400)
     },
-    [later, pushLog, heading],
+    [later, pushLog],
   )
 
   // the bus is always alive: auto-traffic runs continuously, user clicks fire on top of it
@@ -169,7 +169,7 @@ export function SynapseGraph() {
     const cycle: SourceId[] = ["rb", "ls", "imu", "lb", "ls", "rb", "imu"]
     let i = 0
     const id = setInterval(() => {
-      fire(cycle[i % cycle.length], true)
+      fire(cycle[i % cycle.length])
       i++
     }, 2800)
     return () => clearInterval(id)
@@ -294,7 +294,7 @@ export function SynapseGraph() {
         </span>
         <span className="flex items-center gap-3 font-mono text-xs">
           <span className="rounded-full border border-[#22d3ee]/30 bg-[#22d3ee]/10 px-2 py-0.5 text-[#22d3ee]">
-            50 Hz
+            60 Hz
           </span>
           <span className="text-[#7d92a6]">
             messages <span className="font-semibold text-[#67e8f9]">{messages}</span>
