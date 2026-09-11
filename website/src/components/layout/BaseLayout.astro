@@ -86,23 +86,5 @@ const ldArray = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
   </head>
   <body>
     <slot />
-    <script>
-      // Reveal-on-scroll (CSS class toggling only; respects prefers-reduced-motion
-      // because `.reveal` already disables the transition when reduced).
-      const io = new IntersectionObserver(
-        (entries) => {
-          for (const e of entries) {
-            if (e.isIntersecting) {
-              e.target.classList.add('is-visible');
-              io.unobserve(e.target);
-            }
-          }
-        },
-        { rootMargin: '0px 0px -10% 0px', threshold: 0.05 },
-      );
-      const apply = () => document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
-      document.addEventListener('DOMContentLoaded', apply);
-      document.addEventListener('astro:page-load', apply);
-    </script>
   </body>
 </html>

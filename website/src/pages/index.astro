@@ -1,6 +1,6 @@
 ---
 import '@/styles/redesign.css';
-import { codeToHtml } from 'shiki';
+import BaseLayout from '~/components/layout/BaseLayout.astro';
 
 import { highlightJava } from '@/lib/highlight';
 import { QUICKSTART_CODE, PUBSUB_CODE, HARDWARE_CODE } from '@/lib/code-samples';
@@ -104,6 +104,24 @@ const pools = [
 
 const REPO = 'https://github.com/IamCoder18/synapse';
 
+const VERSION = '0.3.1';
+const DESCRIPTION =
+  'A tiny, annotation-driven pub/sub bus for FTC robot code. 40 KB. Zero dependencies. One hardware thread.';
+
+const ld = [
+  { '@context': 'https://schema.org', '@type': 'WebSite', name: 'Synapse', url: '/' },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareSourceCode',
+    name: 'Synapse',
+    description: 'A tiny, annotation-driven pub/sub bus for FIRST Tech Challenge robot code.',
+    codeRepository: REPO,
+    programmingLanguage: 'Java',
+    license: `${REPO}/blob/main/LICENSE`,
+    author: { '@type': 'Person', name: 'IamCoder18', url: 'https://github.com/IamCoder18' },
+  },
+];
+
 const footerCols = [
   {
     heading: 'Product',
@@ -135,23 +153,8 @@ const footerCols = [
 ];
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Synapse — Robot code that thinks in signals</title>
-    <meta
-      name="description"
-      content="A tiny, annotation-driven pub/sub bus for FTC robot code. 40 KB. Zero dependencies. One hardware thread."
-    />
-    <script is:inline>
-      try {
-        if (localStorage.getItem('syn-theme') === 'dark')
-          document.documentElement.classList.add('dark');
-      } catch {}
-    </script>
-  </head>
-  <body class="min-h-dvh overflow-x-hidden">
+<BaseLayout title="Synapse" description={DESCRIPTION} jsonLd={ld}>
+  <div class="min-h-dvh overflow-x-hidden">
     <!-- ================= NAV ================= -->
     <header
       class="sticky top-0 z-50 w-full border-b border-border/60 bg-background/70 backdrop-blur-xl"
@@ -166,7 +169,7 @@ const footerCols = [
           <span
             class="ml-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-0.5 font-mono text-[10px] font-medium text-primary shadow-[0_0_14px_-2px_var(--glow-soft)]"
           >
-            v0.3.1
+            v{VERSION}
           </span>
         </a>
         <nav class="hidden items-center gap-1 md:flex">
@@ -448,7 +451,7 @@ const footerCols = [
             competition table.
           </p>
           <div id="install" class="w-full max-w-lg scroll-mt-24">
-            <CopyInstall client:visible cmd='implementation "com.aaravlabs:synapse:0.3.1"' />
+            <CopyInstall client:visible cmd={`implementation "com.aaravlabs:synapse:${VERSION}"`} />
           </div>
           <a
             href={`${REPO}#readme`}
@@ -482,7 +485,7 @@ const footerCols = [
             <div class="flex flex-wrap items-center gap-2">
               <span class="rounded-full border border-primary/40 bg-primary/10 px-2.5 py-0.5 font-mono text-[10px] font-medium text-primary">MIT</span>
               <span class="rounded-full border border-primary/40 bg-primary/10 px-2.5 py-0.5 font-mono text-[10px] font-medium text-primary">40 KB</span>
-              <span class="rounded-full border border-primary/40 bg-primary/10 px-2.5 py-0.5 font-mono text-[10px] font-medium text-primary">v0.3.1</span>
+              <span class="rounded-full border border-primary/40 bg-primary/10 px-2.5 py-0.5 font-mono text-[10px] font-medium text-primary">v{VERSION}</span>
             </div>
           </div>
           {footerCols.map((col) => (
@@ -523,5 +526,5 @@ const footerCols = [
         </div>
       </div>
     </footer>
-  </body>
-</html>
+  </div>
+</BaseLayout>

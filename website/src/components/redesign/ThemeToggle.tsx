@@ -3,18 +3,20 @@ import { Moon, Sun } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 export function ThemeToggle() {
-  const [dark, setDark] = useState(false)
+  const [dark, setDark] = useState(true)
 
   useEffect(() => {
-    setDark(document.documentElement.classList.contains("dark"))
+    const current = document.documentElement.getAttribute("data-theme") ?? "dark"
+    setDark(current !== "light")
   }, [])
 
   function toggle() {
     const next = !dark
     setDark(next)
-    document.documentElement.classList.toggle("dark", next)
+    const theme = next ? "dark" : "light"
+    document.documentElement.setAttribute("data-theme", theme)
     try {
-      localStorage.setItem("syn-theme", next ? "dark" : "light")
+      localStorage.setItem("synapse-theme", theme)
     } catch {}
   }
 
