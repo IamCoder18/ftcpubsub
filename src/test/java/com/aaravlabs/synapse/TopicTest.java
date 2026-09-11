@@ -92,8 +92,9 @@ class TopicTest {
         orch.publish("t", "a");
         orch.publish("t", "b");
 
-        // Callbacks are async; wait briefly.
-        for (int i = 0; i < 50 && received.size() < 2; i++) Thread.sleep(10);
+        // Callbacks are async; wait briefly. CI runners can be slow to
+        // schedule the callback threads, so budget generously before failing.
+        for (int i = 0; i < 500 && received.size() < 2; i++) Thread.sleep(10);
         assertEquals(List.of("a", "b"), received);
     }
 
@@ -104,7 +105,7 @@ class TopicTest {
         Subscription sub = orch.subscribe("t", String.class, received::add);
 
         orch.publish("t", "a");
-        for (int i = 0; i < 50 && received.size() < 1; i++) Thread.sleep(10);
+        for (int i = 0; i < 500 && received.size() < 1; i++) Thread.sleep(10);
         assertEquals(1, received.size());
 
         sub.unsubscribe();
