@@ -27,7 +27,7 @@ export function PilotForm() {
   function submit(e: FormEvent) {
     e.preventDefault()
     setOpenFailed(false)
-    const win = window.open(issueUrl(), "_blank", "noopener")
+    const win = window.open(issueUrl(), "_blank", "noopener,noreferrer")
     if (!win) setOpenFailed(true)
   }
 

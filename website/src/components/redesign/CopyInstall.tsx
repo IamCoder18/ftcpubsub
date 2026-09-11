@@ -1,9 +1,16 @@
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Check, Copy, Terminal, X } from "lucide-react"
 
 export function CopyInstall({ cmd }: { cmd: string }) {
   const [status, setStatus] = useState<"idle" | "copied" | "failed">("idle")
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current)
+    },
+    [],
+  )
 
   async function copy() {
     try {
@@ -17,9 +24,7 @@ export function CopyInstall({ cmd }: { cmd: string }) {
   }
 
   return (
-    <button
-      type="button"
-      onClick={copy}
+    <div
       title={
         status === "failed"
           ? "Copy failed — select the command and copy manually"
@@ -30,13 +35,22 @@ export function CopyInstall({ cmd }: { cmd: string }) {
       <Terminal className="size-4 shrink-0 text-muted-foreground" />
       <span className="text-muted-foreground select-none">$</span>
       <code className="flex-1 truncate text-foreground">{cmd}</code>
-      {status === "copied" ? (
-        <Check className="size-4 shrink-0 text-chart-3" aria-hidden />
-      ) : status === "failed" ? (
-        <X className="size-4 shrink-0 text-destructive" aria-hidden />
-      ) : (
-        <Copy className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" aria-hidden />
-      )}
+      <button
+        type="button"
+        onClick={copy}
+        aria-label={
+          status === "failed" ? "Copy failed — try again" : "Copy command"
+        }
+        className="rounded-sm p-0.5 outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+      >
+        {status === "copied" ? (
+          <Check className="size-4 shrink-0 text-chart-3" aria-hidden />
+        ) : status === "failed" ? (
+          <X className="size-4 shrink-0 text-destructive" aria-hidden />
+        ) : (
+          <Copy className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" aria-hidden />
+        )}
+      </button>
       <span className="sr-only" role="status" aria-live="polite">
         {status === "copied"
           ? "Copied to clipboard"
@@ -44,6 +58,6 @@ export function CopyInstall({ cmd }: { cmd: string }) {
             ? "Copy failed — select the command and copy manually"
             : ""}
       </span>
-    </button>
+    </div>
   )
 }
