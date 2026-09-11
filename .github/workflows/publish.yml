@@ -66,8 +66,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to Maven Central
-        # Uploads to the Sonatype OSSRH staging repo at s01.oss.sonatype.org,
-        # then closes & releases it so artifacts sync to Maven Central.
+        # Uploads to the Sonatype Central staging API (OSSRH was sunset
+        # 2025-06-30), then closes & releases so artifacts sync to Maven Central.
         run: gradle --no-daemon publishToSonatype closeAndReleaseSonatypeStagingRepository
         env:
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}

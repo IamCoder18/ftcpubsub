@@ -84,8 +84,14 @@ signing {
 }
 
 nexusPublishing {
-    sonatypeHost = 'https://s01.oss.sonatype.org/'
-    // Credentials are read automatically from:
-    //   properties: sonatypeUsername / sonatypePassword
-    //   env vars:   SONATYPE_USERNAME  / SONATYPE_PASSWORD
+    repositories {
+        sonatype {
+            // Sonatype Central staging API (OSSRH was sunset 2025-06-30).
+            // The user-token username/password pair from central.sonatype.com
+            // is read automatically from sonatypeUsername / sonatypePassword
+            // properties (or SONATYPE_USERNAME / SONATYPE_PASSWORD env vars).
+            nexusUrl.set(uri('https://ossrh-staging-api.central.sonatype.com/service/local/'))
+            snapshotRepositoryUrl.set(uri('https://central.sonatype.com/repository/maven-snapshots/'))
+        }
+    }
 }
