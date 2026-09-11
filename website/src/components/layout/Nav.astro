@@ -9,12 +9,12 @@ const isActive = (p: string) => path === p || (p !== '/' && path.startsWith(p));
     <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true">
       <defs>
         <linearGradient id="synapse-g" x1="0" x2="1" y1="0" y2="1">
-          <stop offset="0" stop-color="var(--signal-bright)" />
-          <stop offset="1" stop-color="var(--lime)" />
+          <stop offset="0" stop-color="var(--signal-a)" />
+          <stop offset="1" stop-color="var(--signal-b)" />
         </linearGradient>
       </defs>
-      <circle cx="8" cy="16" r="3.5" fill="var(--signal)" />
-      <circle cx="24" cy="16" r="3.5" fill="var(--lime)" />
+      <circle cx="8" cy="16" r="3.5" fill="var(--signal-a)" />
+      <circle cx="24" cy="16" r="3.5" fill="var(--signal-b)" />
       <path d="M8 16 Q 16 6 24 16" stroke="url(#synapse-g)" stroke-width="1.6" fill="none">
         <animate attributeName="d" dur="2.4s" repeatCount="indefinite"
           values="M8 16 Q 16 6 24 16; M8 16 Q 16 26 24 16; M8 16 Q 16 6 24 16" />
@@ -49,7 +49,7 @@ const isActive = (p: string) => path === p || (p !== '/' && path.startsWith(p));
     align-items: center;
     gap: 1.5rem;
     padding: 0.9rem 1.5rem;
-    background: color-mix(in oklab, var(--surface-0) 80%, transparent);
+    background: color-mix(in oklab, var(--background) 80%, transparent);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--border);
   }
@@ -59,7 +59,7 @@ const isActive = (p: string) => path === p || (p !== '/' && path.startsWith(p));
     gap: 0.55rem;
     font-family: var(--font-display);
     font-weight: 700;
-    color: var(--text);
+    color: var(--foreground);
     text-decoration: none;
     letter-spacing: -0.01em;
   }
@@ -71,14 +71,14 @@ const isActive = (p: string) => path === p || (p !== '/' && path.startsWith(p));
     padding: 0;
   }
   .syn-nav__links a {
-    color: var(--text-muted);
+    color: var(--muted-foreground);
     text-decoration: none;
     font-size: 0.95rem;
   }
   .syn-nav__links a[aria-current='page'] {
-    color: var(--text);
+    color: var(--foreground);
   }
-  .syn-nav__links a:hover { color: var(--text); }
+  .syn-nav__links a:hover { color: var(--foreground); }
   .syn-nav__right {
     margin-left: auto;
     display: flex;
@@ -92,14 +92,14 @@ const isActive = (p: string) => path === p || (p !== '/' && path.startsWith(p));
     padding: 0.45rem 0.75rem;
     border: 1px solid var(--border);
     border-radius: 999px;
-    color: var(--text);
+    color: var(--foreground);
     text-decoration: none;
     font-size: 0.9rem;
-    background: var(--surface-1);
+    background: var(--card);
   }
   .syn-nav__github:hover {
-    border-color: var(--signal-bright);
-    color: var(--lime);
+    border-color: var(--primary);
+    color: var(--primary);
   }
   @media (max-width: 900px) {
     .syn-nav { flex-wrap: wrap; gap: 0.6rem 1rem; padding: 0.7rem 1rem; }

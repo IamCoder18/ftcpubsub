@@ -5,6 +5,42 @@ import Footer from '~/components/layout/Footer.astro';
 import { loadChangelog } from '~/lib/changelog';
 
 const releases = loadChangelog();
+
+// Bullets are raw markdown lines. Tokenize the two inline constructs
+// CHANGELOG.md actually uses — **bold** and `code` — into segments rendered
+// as real elements. Unmatched markers stay literal text, and since output is
+// text nodes, arbitrary HTML in a bullet can never reach the DOM.
+interface InlineToken {
+  text: string;
+  bold?: boolean;
+  code?: boolean;
+}
+
+function tokenizeInline(s: string): InlineToken[] {
+  const tokens: InlineToken[] = [];
+  let rest = s;
+  while (rest) {
+    const bi = rest.indexOf('**');
+    const ci = rest.indexOf('`');
+    if (bi === -1 && ci === -1) break;
+    const useBold = bi !== -1 && (ci === -1 || bi < ci);
+    if (useBold) {
+      const end = rest.indexOf('**', bi + 2);
+      if (end === -1) break;
+      if (bi > 0) tokens.push({ text: rest.slice(0, bi) });
+      tokens.push({ text: rest.slice(bi + 2, end), bold: true });
+      rest = rest.slice(end + 2);
+    } else {
+      const end = rest.indexOf('`', ci + 1);
+      if (end === -1) break;
+      if (ci > 0) tokens.push({ text: rest.slice(0, ci) });
+      tokens.push({ text: rest.slice(ci + 1, end), code: true });
+      rest = rest.slice(end + 1);
+    }
+  }
+  if (rest) tokens.push({ text: rest });
+  return tokens;
+}
 ---
 <BaseLayout
   title="Changelog"
@@ -21,7 +57,7 @@ const releases = loadChangelog();
         <header>
           <h2>
             {rel.isUnreleased ? 'Unreleased' : `v${rel.version}`}
-            {rel.isLatest && <span class="syn-pill syn-pill--accent">Latest</span>}
+            {rel.isLatest && <span class="cl__pill">Latest</span>}
           </h2>
           {rel.date && <p class="cl__date">{rel.date}</p>}
         </header>
@@ -29,7 +65,13 @@ const releases = loadChangelog();
           <section>
             <h3>{s.type[0].toUpperCase()}{s.type.slice(1)}</h3>
             <ul role="list">
-              {s.bullets.map((b) => <li>{b}</li>)}
+              {s.bullets.map((b) => (
+                <li>
+                  {tokenizeInline(b).map((t) =>
+                    t.bold ? <strong>{t.text}</strong> : t.code ? <code>{t.text}</code> : t.text,
+                  )}
+                </li>
+              ))}
             </ul>
           </section>
         ))}
@@ -43,14 +85,30 @@ const releases = loadChangelog();
   .cl { max-width: 820px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
   .cl__head { text-align: center; margin-bottom: 3rem; }
   .cl__head h1 { font-size: clamp(2.4rem, 6vw, 3.4rem); margin: 0; }
-  .cl__head p { color: var(--text-muted); margin-top: 0.6rem; }
-  .cl__rel { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem 1.8rem; margin-bottom: 1.5rem; }
-  .cl__rel--latest { border-color: var(--signal-bright); }
+  .cl__head p { color: var(--muted-foreground); margin-top: 0.6rem; }
+  .cl__head a { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
+  .cl__rel { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem 1.8rem; margin-bottom: 1.5rem; }
+  .cl__rel--latest { border-color: color-mix(in oklab, var(--primary) 45%, transparent); }
+  .cl__pill {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 0.5rem;
+    padding: 0.15rem 0.65rem;
+    border: 1px solid color-mix(in oklab, var(--primary) 40%, transparent);
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--primary) 10%, transparent);
+    color: var(--primary);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 500;
+    vertical-align: middle;
+  }
   .cl__rel header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 0.6rem; }
   .cl__rel h2 { font-size: 1.5rem; margin: 0; }
-  .cl__date { color: var(--text-muted); margin: 0; font-family: var(--font-mono); font-size: 0.85rem; }
-  .cl__rel h3 { font-size: 1rem; margin-top: 1.2rem; text-transform: capitalize; color: var(--signal-bright); font-family: var(--font-display); }
+  .cl__date { color: var(--muted-foreground); margin: 0; font-family: var(--font-mono); font-size: 0.85rem; }
+  .cl__rel h3 { font-size: 1rem; margin-top: 1.2rem; text-transform: capitalize; color: var(--primary); font-family: var(--font-display); }
   .cl__rel ul { padding-left: 1.2rem; }
-  .cl__rel li { line-height: 1.6; color: var(--text-muted); }
-  .cl__rel li strong { color: var(--text); }
+  .cl__rel li { line-height: 1.6; color: var(--muted-foreground); }
+  .cl__rel li strong { color: var(--foreground); }
+  .cl__rel li code { font-family: var(--font-mono); font-size: 0.85em; background: var(--muted); padding: 0.1em 0.35em; border-radius: 4px; }
 </style>

@@ -108,28 +108,28 @@ export default function Search() {
             }
             .syn-search {
               width: min(560px, 92vw);
-              background: var(--surface-1);
+              background: var(--card);
               border: 1px solid var(--border);
               border-radius: 12px;
               padding: 1rem;
-              color: var(--text);
+              color: var(--foreground);
             }
             .syn-search input {
               width: 100%; padding: 0.7rem 0.9rem; border-radius: 8px;
-              background: var(--surface-2); border: 1px solid var(--border);
-              color: var(--text); font-size: 1rem;
+              background: var(--muted); border: 1px solid var(--border);
+              color: var(--foreground); font-size: 1rem;
             }
             .syn-search ul { list-style: none; padding: 0; margin: 0.6rem 0; max-height: 50vh; overflow: auto; }
             .syn-search li a {
               display: block; padding: 0.55rem 0.7rem; border-radius: 8px;
-              color: var(--text); text-decoration: none;
+              color: var(--foreground); text-decoration: none;
             }
-            .syn-search li a:hover { background: var(--surface-2); }
-            .syn-search li a span { display: block; color: var(--text-muted); font-size: 0.85rem; }
-            .syn-search__empty { color: var(--text-muted); padding: 0.7rem; }
-            .syn-search__hint { color: var(--text-muted); font-size: 0.78rem; margin: 0; }
+            .syn-search li a:hover { background: var(--muted); }
+            .syn-search li a span { display: block; color: var(--muted-foreground); font-size: 0.85rem; }
+            .syn-search__empty { color: var(--muted-foreground); padding: 0.7rem; }
+            .syn-search__hint { color: var(--muted-foreground); font-size: 0.78rem; margin: 0; }
             .syn-search__hint kbd {
-              background: var(--surface-2); border: 1px solid var(--border);
+              background: var(--muted); border: 1px solid var(--border);
               border-radius: 4px; padding: 1px 5px; font-family: var(--font-mono);
             }
           `}</style>
@@ -142,22 +142,22 @@ export default function Search() {
           align-items: center;
           gap: 0.45rem;
           padding: 0.4rem 0.7rem;
-          background: var(--surface-1);
+          background: var(--card);
           border: 1px solid var(--border);
           border-radius: 999px;
-          color: var(--text-muted);
+          color: var(--muted-foreground);
           font-size: 0.85rem;
           cursor: pointer;
         }
-        .syn-search-trigger:hover { border-color: var(--signal-bright); color: var(--text); }
+        .syn-search-trigger:hover { border-color: var(--primary); color: var(--foreground); }
         .syn-search-trigger kbd {
           font-family: var(--font-mono);
           font-size: 0.7rem;
           padding: 1px 4px;
           border-radius: 4px;
-          background: var(--surface-2);
+          background: var(--muted);
           border: 1px solid var(--border);
-          color: var(--text-muted);
+          color: var(--muted-foreground);
         }
       `}</style>
     </>

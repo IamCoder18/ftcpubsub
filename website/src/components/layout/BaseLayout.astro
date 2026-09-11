@@ -1,6 +1,6 @@
 ---
 import { ViewTransitions } from 'astro:transitions';
-import '~/styles/global.css';
+import '~/styles/redesign.css';
 
 export interface Props {
   title: string;
@@ -50,20 +50,7 @@ const ldArray = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
       const isDocs = p.startsWith('/docs/') && p !== '/docs/';
       return isDocs ? <link rel="alternate" type="text/markdown" href={`${p.replace(/\/$/, '')}.md`} /> : null;
     })()}
-    <link
-      rel="preconnect"
-      href="https://rsms.me/"
-      crossorigin="anonymous"
-    />
-    <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/@fontsource-variable/space-grotesk@5.0.20/index.min.css"
-    />
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/@fontsource-variable/jetbrains-mono@5.0.20/index.min.css"
-    />
+    <!-- Fonts ship via @fontsource-variable imports in redesign.css -->
 
     <!-- FOUC-free theme boot: read localStorage before paint -->
     <script is:inline>
