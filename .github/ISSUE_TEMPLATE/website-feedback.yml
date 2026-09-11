@@ -1,0 +1,32 @@
+name: Website feedback
+description: Feedback on the Synapse website and docs — the good, the broken, and the missing
+title: "[Website] "
+labels: ["website-feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time! This goes straight to the maintainers
+        and into release planning. Issues are public — please don't include
+        anything you don't want visible.
+  - type: input
+    id: name
+    attributes:
+      label: Name (optional)
+      description: You, your team, or both.
+    validations:
+      required: false
+  - type: input
+    id: team
+    attributes:
+      label: Team number (optional)
+      placeholder: "23684"
+    validations:
+      required: false
+  - type: textarea
+    id: experience
+    attributes:
+      label: Your experience so far
+      description: The good, the broken, and the missing...
+    validations:
+      required: true
