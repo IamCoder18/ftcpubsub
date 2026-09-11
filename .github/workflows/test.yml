@@ -1,0 +1,43 @@
+name: Test
+
+# Default permissions are least-privilege; no job needs elevated access.
+# This satisfies zizmor's excessive-permissions check.
+permissions:
+  contents: read
+
+# A newer push to the same ref cancels any older run that is still
+# in progress, so superseded runs don't tie up runners or produce
+# stale check results.
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Run tests
+        run: gradle --no-daemon test
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: build/reports/tests/test/

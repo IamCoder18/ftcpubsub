@@ -1,6 +1,7 @@
 # Synapse
 
-[![CI](https://github.com/IamCoder18/synapse/actions/workflows/ci.yml/badge.svg)](https://github.com/IamCoder18/synapse/actions/workflows/ci.yml)
+[![Test](https://github.com/IamCoder18/synapse/actions/workflows/test.yml/badge.svg)](https://github.com/IamCoder18/synapse/actions/workflows/test.yml)
+[![Publish](https://github.com/IamCoder18/synapse/actions/workflows/publish.yml/badge.svg)](https://github.com/IamCoder18/synapse/actions/workflows/publish.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Latest release](https://img.shields.io/github/v/tag/IamCoder18/synapse?label=release)](https://github.com/IamCoder18/synapse/releases)
 [![Maven Package](https://img.shields.io/badge/Maven-GitHub%20Packages-blue)](https://github.com/IamCoder18/synapse/packages)
