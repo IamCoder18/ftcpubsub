@@ -126,25 +126,23 @@ const footerCols = [
     heading: 'Product',
     links: [
       { label: 'Features', href: '#features' },
-      { label: 'Installation', href: '#install' },
-      { label: 'Changelog', href: `${REPO}/blob/main/CHANGELOG.md` },
-      { label: 'Roadmap', href: null },
+      { label: 'Installation', href: '/install' },
+      { label: 'Changelog', href: '/changelog' },
     ],
   },
   {
     heading: 'Docs',
     links: [
-      { label: 'Quickstart', href: '#code' },
-      { label: 'Concepts', href: '#threading' },
-      { label: 'API reference', href: null },
-      { label: 'Recipes', href: null },
+      { label: 'Quickstart', href: '/docs/get-started' },
+      { label: 'Concepts', href: '/docs/concepts' },
+      { label: 'API reference', href: '/docs/api' },
+      { label: 'Recipes', href: '/docs/recipes' },
     ],
   },
   {
     heading: 'Community',
     links: [
       { label: 'GitHub', href: REPO },
-      { label: 'Discord', href: null },
       { label: 'Contributing', href: `${REPO}/blob/main/CONTRIBUTING.md` },
       { label: 'Code of conduct', href: `${REPO}/blob/main/CODE_OF_CONDUCT.md` },
     ],
@@ -159,7 +157,7 @@ const footerCols = [
       class="sticky top-0 z-50 w-full border-b border-border/60 bg-background/70 backdrop-blur-xl"
     >
       <div class="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-        <a href="#" class="flex items-center gap-2.5">
+        <a href="/" class="flex items-center gap-2.5">
           <span class="relative flex size-8 items-center justify-center rounded-lg bg-primary/15">
             <span class="absolute size-2.5 rounded-full bg-primary shadow-[0_0_12px_var(--glow-soft)]"></span>
             <span class="absolute size-5 rounded-full border border-primary/40"></span>
@@ -172,10 +170,10 @@ const footerCols = [
           </span>
         </a>
         <nav class="hidden items-center gap-1 md:flex">
-          <a href="#features" class="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Features</a>
-          <a href="#code" class="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Code</a>
-          <a href="#threading" class="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Threading</a>
-          <a href="#faq" class="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">FAQ</a>
+          <a href="/docs" class="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Docs</a>
+          <a href="/install" class="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Install</a>
+          <a href="/changelog" class="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Changelog</a>
+          <a href="/community" class="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Community</a>
         </nav>
         <div class="flex items-center gap-2">
           <ThemeToggle client:load />
@@ -187,7 +185,7 @@ const footerCols = [
           >
             GitHub
           </a>
-          <a href="#cta" class={buttonVariants({ size: 'sm' })}>Get started</a>
+          <a href="/install" class={buttonVariants({ size: 'sm' })}>Get started</a>
         </div>
       </div>
     </header>
@@ -218,7 +216,7 @@ const footerCols = [
             dedicated thread keeps every hardware touch safe.
           </p>
           <div class="flex flex-wrap items-center justify-center gap-3">
-            <a href="#install" class={buttonVariants({ size: 'lg' })}>
+            <a href="/install" class={buttonVariants({ size: 'lg' })}>
               Get started <ArrowRight className="size-4" />
             </a>
             <a
@@ -453,9 +451,7 @@ const footerCols = [
             <CopyInstall client:visible cmd={`implementation "com.aaravlabs:synapse:${VERSION}"`} />
           </div>
           <a
-            href={`${REPO}#readme`}
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/docs"
             class={buttonVariants({ size: 'lg' })}
           >
             Read the docs <ArrowRight className="size-4" />
@@ -470,7 +466,7 @@ const footerCols = [
       <div class="mx-auto max-w-6xl px-6 py-16">
         <div class="grid gap-12 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
           <div class="grid content-start justify-items-start gap-4">
-            <a href="#" class="flex items-center gap-2.5">
+            <a href="/" class="flex items-center gap-2.5">
               <span class="relative flex size-8 items-center justify-center rounded-lg bg-primary/15">
                 <span class="absolute size-2.5 rounded-full bg-primary shadow-[0_0_12px_var(--glow-soft)]"></span>
                 <span class="absolute size-5 rounded-full border border-primary/40"></span>
