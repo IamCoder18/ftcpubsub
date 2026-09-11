@@ -1,0 +1,400 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+@import '@fontsource-variable/sora';
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/jetbrains-mono';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --font-display: 'Sora Variable', system-ui, sans-serif;
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
+}
+
+@theme inline {
+  --font-heading: var(--font-display);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/*
+ * Synaptic Cyan — Synapse brand palette.
+ * Dark-first. Deep blue-slate surfaces, electric cyan signal color,
+ * teal + emerald support. No pink, purple, or orange.
+ */
+
+:root {
+  --radius: 0.625rem;
+
+  --background: oklch(0.985 0.005 220);
+  --foreground: oklch(0.21 0.025 250);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.21 0.025 250);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.21 0.025 250);
+  --primary: oklch(0.52 0.105 225);
+  --primary-foreground: oklch(0.985 0.005 220);
+  --secondary: oklch(0.945 0.008 230);
+  --secondary-foreground: oklch(0.30 0.03 250);
+  --muted: oklch(0.955 0.008 230);
+  --muted-foreground: oklch(0.47 0.025 245);
+  --accent: oklch(0.93 0.03 215);
+  --accent-foreground: oklch(0.35 0.06 235);
+  --destructive: oklch(0.52 0.21 25);
+  --border: oklch(0.90 0.012 235);
+  --input: oklch(0.90 0.012 235);
+  --ring: oklch(0.52 0.105 225);
+  --chart-1: oklch(0.52 0.105 225);
+  --chart-2: oklch(0.56 0.11 190);
+  --chart-3: oklch(0.54 0.13 155);
+  --chart-4: oklch(0.48 0.09 245);
+  --chart-5: oklch(0.45 0.02 240);
+
+  --sidebar: oklch(0.975 0.006 220);
+  --sidebar-foreground: oklch(0.21 0.025 250);
+  --sidebar-primary: oklch(0.52 0.105 225);
+  --sidebar-primary-foreground: oklch(0.985 0.005 220);
+  --sidebar-accent: oklch(0.93 0.03 215);
+  --sidebar-accent-foreground: oklch(0.35 0.06 235);
+  --sidebar-border: oklch(0.90 0.012 235);
+  --sidebar-ring: oklch(0.52 0.105 225);
+
+  --glow: oklch(0.52 0.105 225);
+  --glow-soft: oklch(0.60 0.10 220 / 0.13);
+  --signal-a: oklch(0.50 0.10 232);
+  --signal-b: oklch(0.55 0.11 190);
+}
+
+.dark {
+  --background: oklch(0.14 0.018 250);
+  --foreground: oklch(0.955 0.008 230);
+  --card: oklch(0.175 0.02 250);
+  --card-foreground: oklch(0.955 0.008 230);
+  --popover: oklch(0.165 0.02 250);
+  --popover-foreground: oklch(0.955 0.008 230);
+  --primary: oklch(0.86 0.135 200);
+  --primary-foreground: oklch(0.16 0.03 245);
+  --secondary: oklch(0.24 0.022 248);
+  --secondary-foreground: oklch(0.94 0.01 235);
+  --muted: oklch(0.225 0.02 248);
+  --muted-foreground: oklch(0.71 0.02 240);
+  --accent: oklch(0.26 0.03 235);
+  --accent-foreground: oklch(0.90 0.04 210);
+  --destructive: oklch(0.66 0.20 25);
+  --border: oklch(0.98 0.01 235 / 10%);
+  --input: oklch(0.98 0.01 235 / 14%);
+  --ring: oklch(0.82 0.12 205);
+  --chart-1: oklch(0.86 0.13 200);
+  --chart-2: oklch(0.80 0.12 185);
+  --chart-3: oklch(0.78 0.14 155);
+  --chart-4: oklch(0.72 0.10 245);
+  --chart-5: oklch(0.65 0.02 240);
+
+  --sidebar: oklch(0.16 0.02 250);
+  --sidebar-foreground: oklch(0.955 0.008 230);
+  --sidebar-primary: oklch(0.86 0.135 200);
+  --sidebar-primary-foreground: oklch(0.16 0.03 245);
+  --sidebar-accent: oklch(0.26 0.03 235);
+  --sidebar-accent-foreground: oklch(0.90 0.04 210);
+  --sidebar-border: oklch(0.98 0.01 235 / 10%);
+  --sidebar-ring: oklch(0.82 0.12 205);
+
+  --glow: oklch(0.86 0.135 200);
+  --glow-soft: oklch(0.86 0.135 200 / 0.16);
+  --signal-a: oklch(0.87 0.12 205);
+  --signal-b: oklch(0.84 0.12 170);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: 'ss01' on;
+  }
+  h1, h2, h3, h4 {
+    @apply font-display tracking-tight;
+  }
+  ::selection {
+    background: var(--glow-soft);
+  }
+}
+
+/* ---------- brand helpers ---------- */
+
+.text-signal {
+  background: linear-gradient(100deg, var(--signal-a) 0%, var(--signal-b) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.grid-bg {
+  background-image:
+    linear-gradient(to right, var(--border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse 90% 80% at 50% 0%, black 35%, transparent 100%);
+}
+
+.glow-card {
+  position: relative;
+}
+.glow-card::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(140deg, var(--glow-soft), transparent 40%, transparent 60%, var(--glow-soft));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* ---------- synapse pub/sub simulator (fixed dark instrument chrome) ---------- */
+
+.sim-edge {
+  stroke: #223140;
+  stroke-width: 1.4;
+  fill: none;
+}
+.sim-flow {
+  stroke: #22d3ee;
+  stroke-opacity: 0.22;
+  stroke-width: 1.6;
+  fill: none;
+  stroke-dasharray: 2 9;
+  animation: sim-drift 2.2s linear infinite;
+}
+@keyframes sim-drift {
+  to { stroke-dashoffset: -44; }
+}
+.sim-edge-label {
+  fill: #51677c;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+}
+.sim-rail-label {
+  fill: #51677c;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+}
+
+.sim-chip {
+  cursor: pointer;
+}
+.sim-chip rect {
+  fill: #131c28;
+  stroke: #223140;
+  stroke-width: 1.2;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 0.08s ease, stroke 0.18s ease, filter 0.18s ease;
+}
+.sim-chip:hover rect,
+.sim-chip:focus-visible rect {
+  stroke: #22d3ee;
+  filter: drop-shadow(0 0 5px rgb(34 211 238 / 0.35));
+}
+.sim-chip:active rect {
+  transform: scale(0.97);
+}
+.sim-chip:focus {
+  outline: none;
+}
+.sim-chip .sim-label {
+  fill: #d7e3f0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+}
+.sim-chip .sim-topic {
+  fill: #7d92a6;
+  font-family: var(--font-mono);
+  font-size: 9px;
+}
+.sim-chip .sim-value {
+  fill: #67e8f9;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+.sim-bar-bg {
+  fill: #1b2836;
+}
+.sim-bar-fill {
+  fill: #22d3ee;
+  transition: width 0.35s ease;
+}
+.sim-chip.flashing rect {
+  stroke: #22d3ee;
+  stroke-width: 1.8;
+  filter: drop-shadow(0 0 8px rgb(34 211 238 / 0.45));
+}
+.sim-chip.static {
+  cursor: default;
+}
+.sim-group {
+  fill: rgb(34 211 238 / 0.03);
+  stroke: #223140;
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+.sim-group-label {
+  fill: #7d92a6;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+}
+
+.sim-hub-dot {
+  fill: #22d3ee;
+  filter: drop-shadow(0 0 8px rgb(34 211 238 / 0.8));
+}
+.sim-hub-core {
+  fill: #101a26;
+  stroke: #223140;
+}
+.sim-hub-ring {
+  fill: none;
+  stroke: #22d3ee;
+  stroke-opacity: 0.55;
+  stroke-dasharray: 4 7;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sim-spin 14s linear infinite;
+}
+.sim-ping {
+  fill: none;
+  stroke: #22d3ee;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sim-ping 2.4s ease-out infinite;
+}
+.sim-ping.d2 {
+  animation-delay: 1.2s;
+}
+@keyframes sim-ping {
+  0% { transform: scale(0.45); opacity: 0.7; }
+  100% { transform: scale(1.7); opacity: 0; }
+}
+.sim-hub-caption {
+  fill: #51677c;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+@keyframes sim-spin {
+  to { transform: rotate(360deg); }
+}
+
+.sim-pulse-dot {
+  fill: #22d3ee;
+  filter: drop-shadow(0 0 5px #22d3ee);
+}
+
+.sim-status-dot {
+  fill: #34d399;
+}
+.sim-status-dot.off {
+  fill: #33475c;
+}
+
+.sim-log-line {
+  animation: sim-log-in 0.3s ease;
+}
+@keyframes sim-log-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---------- code blocks (shiki, fixed dark chrome) ---------- */
+
+.code-block pre {
+  margin: 0;
+  padding: 1.1rem 1.25rem !important;
+  border-radius: 0 !important;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.7;
+  overflow-x: auto;
+}
+.code-block code {
+  font-family: var(--font-mono);
+  background: transparent !important;
+  counter-reset: line;
+}
+
+.sim-value-flash {
+  animation: sim-value-in 0.5s ease;
+}
+@keyframes sim-value-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sim-hub-ring, .sim-flow, .sim-ping, .sim-log-line, .sim-value-flash { animation: none; }
+}

@@ -1,4 +1,5 @@
 // @ts-check
+import path from 'node:path';
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import mdx from '@astrojs/mdx';
@@ -15,6 +16,12 @@ export default defineConfig({
   // omit it and emit our own domain-free sitemap via a custom endpoint
   // at /sitemap.xml (see src/pages/sitemap.xml.ts).
   output: 'static',
+  devToolbar: { enabled: false },
+  resolve: {
+    alias: {
+      '@': path.resolve('./src'),
+    },
+  },
   integrations: [
     react(),
     mdx(),
