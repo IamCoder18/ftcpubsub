@@ -14,10 +14,10 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class NodeTest {
 
-    private Orchestrator orch;
+    private Orchestrator orchestrator;
 
-    @BeforeEach void setUp() { orch = Orchestrator.create("test"); }
-    @AfterEach  void tearDown() { orch.close(); }
+    @BeforeEach void setUp() { orchestrator = Orchestrator.create("test"); }
+    @AfterEach  void tearDown() { orchestrator.close(); }
 
     static class SubscriberNode extends Node {
         final List<String> events = new ArrayList<>();
@@ -35,19 +35,19 @@ class NodeTest {
 
     @Test
     void subscribedTo_isInvokedOnPublish() throws Exception {
-        SubscriberNode n = new SubscriberNode(orch);
-        orch.getOrCreateTopic("ping", String.class);
-        orch.registerNode("sub", n);
+        SubscriberNode n = new SubscriberNode(orchestrator);
+        orchestrator.getOrCreateTopic("ping", String.class);
+        orchestrator.registerNode("sub", n);
 
-        orch.publish("ping", "hello");
+        orchestrator.publish("ping", "hello");
         for (int i = 0; i < 50 && n.events.isEmpty(); i++) Thread.sleep(10);
         assertEquals(List.of("hello"), n.events);
     }
 
     @Test
     void runPeriodically_firesAtApproximateRate() throws Exception {
-        PeriodicNode n = new PeriodicNode(orch);
-        orch.registerNode("periodic", n);
+        PeriodicNode n = new PeriodicNode(orchestrator);
+        orchestrator.registerNode("periodic", n);
 
         Thread.sleep(120); // ~12 ticks at 100 Hz
         int after = n.ticks.get();
@@ -57,19 +57,19 @@ class NodeTest {
 
     @Test
     void unregisterNode_stopsSubscriptionsAndPeriodic() throws Exception {
-        SubscriberNode n = new SubscriberNode(orch);
-        PeriodicNode p = new PeriodicNode(orch);
-        orch.getOrCreateTopic("ping", String.class);
-        orch.registerNode("sub", n);
-        orch.registerNode("periodic", p);
+        SubscriberNode n = new SubscriberNode(orchestrator);
+        PeriodicNode p = new PeriodicNode(orchestrator);
+        orchestrator.getOrCreateTopic("ping", String.class);
+        orchestrator.registerNode("sub", n);
+        orchestrator.registerNode("periodic", p);
 
-        orch.unregisterNode("sub");
-        orch.publish("ping", "after-unregister");
+        orchestrator.unregisterNode("sub");
+        orchestrator.publish("ping", "after-unregister");
         Thread.sleep(50);
         assertTrue(n.events.isEmpty(), "should not receive after unregister");
 
         int before = p.ticks.get();
-        orch.unregisterNode("periodic");
+        orchestrator.unregisterNode("periodic");
         Thread.sleep(80);
         int after = p.ticks.get();
         assertEquals(before, after, "periodic should stop after unregister");
@@ -77,8 +77,8 @@ class NodeTest {
 
     @Test
     void multipleSubscribedToOnSameMethod() throws Exception {
-        orch.getOrCreateTopic("a", String.class);
-        orch.getOrCreateTopic("b", String.class);
+        orchestrator.getOrCreateTopic("a", String.class);
+        orchestrator.getOrCreateTopic("b", String.class);
 
         class N extends Node {
             final List<String> seen = new ArrayList<>();
@@ -88,11 +88,11 @@ class NodeTest {
             public void onAny(String msg) { seen.add(msg); }
         }
 
-        N n = new N(orch);
-        orch.registerNode("n", n);
+        N n = new N(orchestrator);
+        orchestrator.registerNode("n", n);
 
-        orch.publish("a", "1");
-        orch.publish("b", "2");
+        orchestrator.publish("a", "1");
+        orchestrator.publish("b", "2");
         for (int i = 0; i < 50 && n.seen.size() < 2; i++) Thread.sleep(10);
         assertTrue(n.seen.contains("1"));
         assertTrue(n.seen.contains("2"));

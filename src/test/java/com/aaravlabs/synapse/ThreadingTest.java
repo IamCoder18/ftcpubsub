@@ -15,12 +15,12 @@ class ThreadingTest {
 
     @Test
     void slowCallback_doesNotBlockPeriodicLoop() throws Exception {
-        Orchestrator orch = Orchestrator.create("test");
+        Orchestrator orchestrator = Orchestrator.create("test");
         try {
-            orch.getOrCreateTopic("slow", String.class);
+            orchestrator.getOrCreateTopic("slow", String.class);
 
             List<String> received = new CopyOnWriteArrayList<>();
-            orch.subscribe("slow", String.class, msg -> {
+            orchestrator.subscribe("slow", String.class, msg -> {
                 // Sleep inside the callback to flood the callback pool.
                 try { Thread.sleep(50); } catch (InterruptedException ignored) {}
                 received.add(msg);
@@ -28,10 +28,10 @@ class ThreadingTest {
 
             // Periodic loop running on the SCHEDULER pool.
             java.util.concurrent.atomic.AtomicInteger ticks = new java.util.concurrent.atomic.AtomicInteger();
-            orch.runPeriodically(ticks::incrementAndGet, 100);
+            orchestrator.runPeriodically(ticks::incrementAndGet, 100);
 
             // Publish a flurry of slow messages.
-            for (int i = 0; i < 20; i++) orch.publish("slow", "msg-" + i);
+            for (int i = 0; i < 20; i++) orchestrator.publish("slow", "msg-" + i);
 
             // Sleep long enough for the scheduler pool to have ticked many times.
             Thread.sleep(300);
@@ -43,24 +43,24 @@ class ThreadingTest {
             // Callbacks eventually drained (backpressure, not drop).
             // We don't assert exact count because of CallerRunsPolicy timing.
         } finally {
-            orch.close();
+            orchestrator.close();
         }
     }
 
     @Test
     void close_shutsDownAllPools() throws Exception {
-        Orchestrator orch = Orchestrator.create("test");
-        orch.runPeriodically(() -> {}, 50);
-        orch.getOrCreateTopic("t", String.class);
-        orch.subscribe("t", String.class, s -> {});
-        orch.publish("t", "x");
+        Orchestrator orchestrator = Orchestrator.create("test");
+        orchestrator.runPeriodically(() -> {}, 50);
+        orchestrator.getOrCreateTopic("t", String.class);
+        orchestrator.subscribe("t", String.class, s -> {});
+        orchestrator.publish("t", "x");
         Thread.sleep(20);
 
-        orch.close();
-        assertTrue(orch.isClosed());
+        orchestrator.close();
+        assertTrue(orchestrator.isClosed());
 
         // Second close should be a no-op.
-        orch.close();
-        assertTrue(orch.isClosed());
+        orchestrator.close();
+        assertTrue(orchestrator.isClosed());
     }
 }

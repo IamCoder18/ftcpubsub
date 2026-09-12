@@ -40,8 +40,8 @@ import java.lang.annotation.Target;
  * public class IntakeNode extends Node {
  *     private final DcMotorEx motor;
  *
- *     public IntakeNode(Orchestrator orch, HardwareMap hwMap) {
- *         super(orch);
+ *     public IntakeNode(Orchestrator orchestrator, HardwareMap hwMap) {
+ *         super(orchestrator);
  *         this.motor = hwMap.get(DcMotorEx.class, "intake");
  *     }
  *

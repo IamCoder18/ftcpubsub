@@ -40,10 +40,10 @@ import java.util.concurrent.TimeoutException;
  */
 public final class HardwareActions {
 
-    private final OrchestratorImpl orch;
+    private final OrchestratorImpl orchestrator;
 
-    public HardwareActions(OrchestratorImpl orch) {
-        this.orch = orch;
+    public HardwareActions(OrchestratorImpl orchestrator) {
+        this.orchestrator = orchestrator;
     }
 
     // ------------------------------------------------------------------
@@ -57,7 +57,7 @@ public final class HardwareActions {
      * @param action the runnable to execute on the hardware thread
      */
     public void run(Runnable action) {
-        orch.runOnHardwareThread(action);
+        orchestrator.runOnHardwareThread(action);
     }
 
     // ------------------------------------------------------------------
@@ -85,7 +85,7 @@ public final class HardwareActions {
      */
     public <T> T call(Callable<T> action) throws Exception {
         CompletableFuture<T> f = new CompletableFuture<>();
-        orch.runOnHardwareThread(() -> {
+        orchestrator.runOnHardwareThread(() -> {
             try {
                 f.complete(action.call());
             } catch (Throwable t) {
@@ -122,7 +122,7 @@ public final class HardwareActions {
      */
     public <T> T call(Callable<T> action, long timeout, TimeUnit unit) throws Exception {
         CompletableFuture<T> f = new CompletableFuture<>();
-        orch.runOnHardwareThread(() -> {
+        orchestrator.runOnHardwareThread(() -> {
             try { f.complete(action.call()); }
             catch (Throwable t) { f.completeExceptionally(t); }
         });
@@ -158,7 +158,7 @@ public final class HardwareActions {
      */
     public <T> CompletableFuture<T> callAsync(Callable<T> action) {
         CompletableFuture<T> f = new CompletableFuture<>();
-        orch.runOnHardwareThread(() -> {
+        orchestrator.runOnHardwareThread(() -> {
             try {
                 f.complete(action.call());
             } catch (Throwable t) {
@@ -195,7 +195,7 @@ public final class HardwareActions {
      * @return a handle for cancellation
      */
     public BulkReadHandle bulkRead(int hz, BulkReader reader) {
-        return orch.scheduleHardwareBulkRead(hz, reader);
+        return orchestrator.scheduleHardwareBulkRead(hz, reader);
     }
 
     /**
@@ -218,7 +218,7 @@ public final class HardwareActions {
      *         enforce thread safety.
      */
     public boolean isHardwareThread() {
-        return orch.isHardwareThread();
+        return orchestrator.isHardwareThread();
     }
 
     /**
@@ -254,7 +254,7 @@ public final class HardwareActions {
      * so you rarely need this.
      */
     public void shutdown() {
-        orch.close();
+        orchestrator.close();
     }
 
     /** Handle returned from {@link #bulkRead}, used to cancel. */

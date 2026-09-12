@@ -27,14 +27,14 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class HardwareThreadTest {
 
-    private Orchestrator orch;
+    private Orchestrator orchestrator;
 
     @BeforeEach void setUp() {
         // The orchestrator name is intentionally NOT containing "hw" so the
         // hardware-thread prefix "-hw-" is an unambiguous marker.
-        orch = Orchestrator.create("robot");
+        orchestrator = Orchestrator.create("robot");
     }
-    @AfterEach  void tearDown() { orch.close(); }
+    @AfterEach  void tearDown() { orchestrator.close(); }
 
     /**
      * A fake "hardware device" with a non-thread-safe counter. The counter only
@@ -69,15 +69,15 @@ class HardwareThreadTest {
 
     @Test
     void allHardwareWorkRunsOnASingleThread() throws Exception {
-        HardwareSubscriberNode node = new HardwareSubscriberNode(orch);
-        orch.getOrCreateTopic("hw/write", String.class);
-        orch.registerNode("hw", node);
+        HardwareSubscriberNode node = new HardwareSubscriberNode(orchestrator);
+        orchestrator.getOrCreateTopic("hw/write", String.class);
+        orchestrator.registerNode("hw", node);
 
         // Hammer the topic from many threads.
         Thread[] publishers = new Thread[8];
         for (int i = 0; i < publishers.length; i++) {
             publishers[i] = new Thread(() -> {
-                for (int j = 0; j < 50; j++) orch.publish("hw/write", "pub-" + Thread.currentThread().getId());
+                for (int j = 0; j < 50; j++) orchestrator.publish("hw/write", "pub-" + Thread.currentThread().getId());
             });
             publishers[i].start();
         }
@@ -100,12 +100,12 @@ class HardwareThreadTest {
         // Now the callback pool is drained. Fence the hardware thread to ensure
         // all in-flight hardware tasks have completed.
         CountDownLatch drained = new CountDownLatch(1);
-        orch.runOnHardwareThread(drained::countDown);
+        orchestrator.runOnHardwareThread(drained::countDown);
         assertTrue(drained.await(5, TimeUnit.SECONDS),
                 "hardware thread should drain in <5s after publishers join");
 
         // Unregister so @AfterEach close doesn't interrupt an in-flight task.
-        orch.unregisterNode("hw");
+        orchestrator.unregisterNode("hw");
 
         // Verify the +/- pairing invariant. If hardware-thread serial execution
         // were broken, we'd see "+pub-X" followed by "+pub-Y" before any "-".
@@ -126,9 +126,9 @@ class HardwareThreadTest {
     @Test
     void nonHardwareCallbacksStillRunOnCallbackPool() throws Exception {
         AtomicReference<String> callbackThreadName = new AtomicReference<>();
-        orch.subscribe("regular", String.class, msg -> callbackThreadName.set(Thread.currentThread().getName()));
+        orchestrator.subscribe("regular", String.class, msg -> callbackThreadName.set(Thread.currentThread().getName()));
 
-        orch.publish("regular", "x");
+        orchestrator.publish("regular", "x");
         for (int i = 0; i < 100 && callbackThreadName.get() == null; i++) Thread.sleep(10);
 
         assertNotNull(callbackThreadName.get());
@@ -154,9 +154,9 @@ class HardwareThreadTest {
                 done.countDown();
             }
         }
-        orch.getOrCreateTopic("x", String.class);
-        orch.registerNode("n", new N(orch));
-        orch.publish("x", "hello");
+        orchestrator.getOrCreateTopic("x", String.class);
+        orchestrator.registerNode("n", new N(orchestrator));
+        orchestrator.publish("x", "hello");
 
         assertTrue(done.await(1, TimeUnit.SECONDS));
         assertNotNull(hwThreadName.get());
@@ -178,7 +178,7 @@ class HardwareThreadTest {
                 }
             }
         }
-        orch.registerNode("n", new N(orch));
+        orchestrator.registerNode("n", new N(orchestrator));
         assertTrue(done.await(2, TimeUnit.SECONDS), "hardware periodic should tick at least once");
         assertNotNull(hwThreadName.get());
         assertTrue(hwThreadName.get().contains("-hw-"),
@@ -187,7 +187,7 @@ class HardwareThreadTest {
 
     @Test
     void runOnHardwareThreadRunsOnHardwareThread() throws Exception {
-        orch.runOnHardwareThread(() -> {
+        orchestrator.runOnHardwareThread(() -> {
             assertTrue(Thread.currentThread().getName().contains("-hw-"));
         });
         // Give the executor time.
@@ -211,11 +211,11 @@ class HardwareThreadTest {
                 done.countDown();
             }
         }
-        orch.getOrCreateTopic("both", String.class);
-        orch.registerNode("n", new N(orch));
-        orch.subscribe("both", String.class, s -> regularThread.set(Thread.currentThread().getName()));
+        orchestrator.getOrCreateTopic("both", String.class);
+        orchestrator.registerNode("n", new N(orchestrator));
+        orchestrator.subscribe("both", String.class, s -> regularThread.set(Thread.currentThread().getName()));
 
-        orch.publish("both", "x");
+        orchestrator.publish("both", "x");
 
         assertTrue(done.await(2, TimeUnit.SECONDS));
         for (int i = 0; i < 100 && regularThread.get() == null; i++) Thread.sleep(10);

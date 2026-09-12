@@ -57,8 +57,8 @@ public final class GamepadAdaptor extends Node {
     private final boolean[] lastButton;
     private final boolean gamepadResolved;
 
-    private GamepadAdaptor(Orchestrator orch, Object gamepad, String parentTopic) {
-        super(orch);
+    private GamepadAdaptor(Orchestrator orchestrator, Object gamepad, String parentTopic) {
+        super(orchestrator);
         this.gamepad = gamepad;
         this.parentTopic = parentTopic;
         this.gamepadResolved = (gamepad != null);
@@ -82,12 +82,12 @@ public final class GamepadAdaptor extends Node {
 
         // Pre-create the topics so consumers can subscribe before the first tick.
         for (Field f : buttonFields) {
-            orch.getOrCreateTopic(topic(f.getName()), Boolean.class);
-            orch.getOrCreateTopic(topic(f.getName() + "/rising"), Boolean.class);
-            orch.getOrCreateTopic(topic(f.getName() + "/falling"), Boolean.class);
+            orchestrator.getOrCreateTopic(topic(f.getName()), Boolean.class);
+            orchestrator.getOrCreateTopic(topic(f.getName() + "/rising"), Boolean.class);
+            orchestrator.getOrCreateTopic(topic(f.getName() + "/falling"), Boolean.class);
         }
         for (Field f : axisFields) {
-            orch.getOrCreateTopic(topic(f.getName()), Float.class);
+            orchestrator.getOrCreateTopic(topic(f.getName()), Float.class);
         }
     }
 
@@ -101,16 +101,16 @@ public final class GamepadAdaptor extends Node {
      * {@code GamepadAdaptor:<parentTopic>} so it is cleaned up automatically when
      * the orchestrator closes.
      *
-     * @param orch the orchestrator to publish to
+     * @param orchestrator the orchestrator to publish to
      * @param gamepad the SDK {@code Gamepad} instance to reflect (usually
      *                {@code gamepad1} or {@code gamepad2})
      * @param parentTopic prefix for all published topics, e.g. {@code "g1"}
      * @return the registered node name ({@code "GamepadAdaptor:<parentTopic>"})
      */
-    public static String attach(Orchestrator orch, Object gamepad, String parentTopic) {
+    public static String attach(Orchestrator orchestrator, Object gamepad, String parentTopic) {
         String name = "GamepadAdaptor:" + parentTopic;
-        GamepadAdaptor adaptor = new GamepadAdaptor(orch, gamepad, parentTopic);
-        orch.registerNode(name, adaptor);
+        GamepadAdaptor adaptor = new GamepadAdaptor(orchestrator, gamepad, parentTopic);
+        orchestrator.registerNode(name, adaptor);
         return name;
     }
 

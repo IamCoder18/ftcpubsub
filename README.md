@@ -117,8 +117,8 @@ public class SynapseDemo extends SafeOpMode {
     }
 
     public static class DriveNode extends Node {
-        DriveNode(Orchestrator orch, SafeDevice<DcMotorEx> left, SafeDevice<DcMotorEx> right) {
-            super(orch);
+        DriveNode(Orchestrator orchestrator, SafeDevice<DcMotorEx> left, SafeDevice<DcMotorEx> right) {
+            super(orchestrator);
             this.left = left;
             this.right = right;
         }

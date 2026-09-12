@@ -32,16 +32,16 @@ class SoakTest {
     @Test
     void sustainedPublishAndRegisterDoesNotLeakOrDeadlock() throws Exception {
         int seconds = soakSeconds();
-        Orchestrator orch = Orchestrator.create("soak");
+        Orchestrator orchestrator = Orchestrator.create("soak");
         try {
             // Producer: 1kHz publishes.
             Thread producer = new Thread(() -> {
                 long deadline = System.currentTimeMillis() + seconds * 1000L;
                 int i = 0;
                 while (System.currentTimeMillis() < deadline) {
-                    orch.publish("soak/int", i++);
-                    orch.publish("soak/double", i * 0.5);
-                    orch.publish("soak/string", "v" + i);
+                    orchestrator.publish("soak/int", i++);
+                    orchestrator.publish("soak/double", i * 0.5);
+                    orchestrator.publish("soak/string", "v" + i);
                 }
             }, "soak-producer");
             producer.start();
@@ -52,17 +52,17 @@ class SoakTest {
                 int i = 0;
                 while (System.currentTimeMillis() < deadline) {
                     String name = "soak-node-" + (i++ % 50);
-                    orch.getOrCreateTopic("soak/int", Integer.class);
-                    orch.getOrCreateTopic("soak/double", Double.class);
-                    orch.getOrCreateTopic("soak/string", String.class);
-                    orch.unregisterNode(name);
+                    orchestrator.getOrCreateTopic("soak/int", Integer.class);
+                    orchestrator.getOrCreateTopic("soak/double", Double.class);
+                    orchestrator.getOrCreateTopic("soak/string", String.class);
+                    orchestrator.unregisterNode(name);
                 }
             }, "soak-consumer");
             consumer.start();
 
             // Periodic: a counter ticking at 100Hz.
             AtomicInteger ticks = new AtomicInteger();
-            orch.runPeriodically(ticks::incrementAndGet, 100);
+            orchestrator.runPeriodically(ticks::incrementAndGet, 100);
 
             producer.join();
             consumer.join();
@@ -75,10 +75,10 @@ class SoakTest {
             // After orchestrator close, all pools should shut down within 500ms.
         } finally {
             long t0 = System.currentTimeMillis();
-            orch.close();
+            orchestrator.close();
             long elapsed = System.currentTimeMillis() - t0;
             assertTrue(elapsed < 1000, "close should complete within 1s, took " + elapsed + "ms");
-            assertTrue(orch.isClosed());
+            assertTrue(orchestrator.isClosed());
         }
     }
 
@@ -87,17 +87,17 @@ class SoakTest {
         // Race: another thread publishes while we're subscribing. We must not
         // lose or duplicate messages, and the SubscriberList snapshot must remain
         // consistent.
-        Orchestrator orch = Orchestrator.create("race");
+        Orchestrator orchestrator = Orchestrator.create("race");
         try {
-            orch.getOrCreateTopic("race/topic", Integer.class);
+            orchestrator.getOrCreateTopic("race/topic", Integer.class);
 
             Thread publisher = new Thread(() -> {
-                for (int i = 0; i < 1000; i++) orch.publish("race/topic", i);
+                for (int i = 0; i < 1000; i++) orchestrator.publish("race/topic", i);
             }, "race-publisher");
 
             Thread subscriber = new Thread(() -> {
                 for (int i = 0; i < 100; i++) {
-                    Subscription sub = orch.subscribe("race/topic", Integer.class, v -> {});
+                    Subscription sub = orchestrator.subscribe("race/topic", Integer.class, v -> {});
                     sub.unsubscribe();
                 }
             }, "race-subscriber");
@@ -109,30 +109,30 @@ class SoakTest {
 
             // Should complete without exceptions or hangs. The exact count is
             // non-deterministic; we just verify the bus is still operational.
-            orch.publish("race/topic", -1);
+            orchestrator.publish("race/topic", -1);
             assertEquals(Integer.valueOf(-1),
-                    orch.getLatestValue("race/topic", Integer.class).orElse(null));
+                    orchestrator.getLatestValue("race/topic", Integer.class).orElse(null));
 
         } finally {
-            orch.close();
+            orchestrator.close();
         }
     }
 
     @Test
     void closeIsIdempotentAndClean() throws Exception {
-        Orchestrator orch = Orchestrator.create("close");
-        orch.registerNode("n", new Node(orch) {
+        Orchestrator orchestrator = Orchestrator.create("close");
+        orchestrator.registerNode("n", new Node(orchestrator) {
             @SubscribedTo(topic = "x") public void onX(String s) {}
             @RunPeriodically(hz = 50) public void tick() {}
         });
-        orch.getOrCreateTopic("x", String.class);
-        orch.subscribe("x", String.class, s -> {});
-        orch.publish("x", "v");
+        orchestrator.getOrCreateTopic("x", String.class);
+        orchestrator.subscribe("x", String.class, s -> {});
+        orchestrator.publish("x", "v");
         Thread.sleep(50);
 
-        orch.close();
-        orch.close(); // idempotent
-        orch.close(); // idempotent
-        assertTrue(orch.isClosed());
+        orchestrator.close();
+        orchestrator.close(); // idempotent
+        orchestrator.close(); // idempotent
+        assertTrue(orchestrator.isClosed());
     }
 }

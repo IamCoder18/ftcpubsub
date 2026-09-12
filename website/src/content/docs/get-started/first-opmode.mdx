@@ -28,8 +28,8 @@ public class SynapseFirst extends SafeOpMode {
     }
 
     public static class DriveNode extends Node {
-        DriveNode(Orchestrator orch, SafeDevice<DcMotorEx> motor) {
-            super(orch);
+        DriveNode(Orchestrator orchestrator, SafeDevice<DcMotorEx> motor) {
+            super(orchestrator);
             this.motor = motor;
         }
         private final SafeDevice<DcMotorEx> motor;

@@ -71,6 +71,7 @@ public abstract class SafeOpMode extends OpMode {
     protected SafeHardwareMap safeMap;
 
     @Override
+    @SuppressWarnings("deprecation")
     public final void init() {
         orchestrator = FtcOrchestrator.create();
         orch = orchestrator;
@@ -116,6 +117,6 @@ public abstract class SafeOpMode extends OpMode {
     /** Called when the OpMode starts. Defaults to no-op. */
     protected void onSafeStart() {}
 
-    /** Called when the OpMode stops, before orch is closed. Defaults to no-op. */
+    /** Called when the OpMode stops, before orchestrator is closed. Defaults to no-op. */
     protected void onSafeStop() {}
 }
