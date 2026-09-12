@@ -135,8 +135,10 @@ public class SynapseDemo extends SafeOpMode {
 }
 ```
 
-Full walkthrough in the [First OpMode](#) docs; a robot-validated drivetrain
-in the [Mecanum drive recipe](#).
+Full walkthrough in the
+[First OpMode docs](https://github.com/IamCoder18/synapse/blob/main/website/src/content/docs/get-started/first-opmode.mdx);
+a robot-validated drivetrain in the
+[Mecanum drive recipe](https://github.com/IamCoder18/synapse/blob/main/website/src/content/docs/recipes/mecanum-drive.mdx).
 
 ## The one rule
 
@@ -294,9 +296,9 @@ githubUser=<your-github-username>
 githubToken=<a-token-with-read:packages>
 ```
 
-Full walkthrough with the Kotlin DSL and troubleshooting:
-[Install docs](https://github.com/IamCoder18/synapse#readme) (see the website's
-[Install page](/docs/get-started/install) after deployment).
+Full walkthrough with the Kotlin DSL and troubleshooting in the
+[Install docs](https://github.com/IamCoder18/synapse/blob/main/website/src/content/docs/get-started/install.mdx),
+also served at `/docs/get-started/install` on the website.
 
 ## API reference
 
