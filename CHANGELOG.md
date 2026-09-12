@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Renamed local/parameter/field `orch` to `orchestrator` for naming
+  consistency.** All bindings across the codebase (Java sources, tests, docs,
+  examples) now use the canonical full word `orchestrator`. Internal
+  parameters on `HardwareActions`, `GamepadAdaptor`, and `AnnotationBinder`
+  are renamed; this is not a binary-incompatible change at the Java source
+  level because parameter names are not part of the signature.
+
+### Deprecated
+
+- **`SafeOpMode.orch` retained as a deprecated alias.** Subclasses that still
+  reference `this.orch` will compile with a deprecation warning and continue
+  to receive the same `Orchestrator` instance (kept in sync inside `init()`).
+  The alias is a passive reference — lifecycle flows through
+  `orchestrator.close()` only.
+
 ## [0.3.1] - 2026-09-07
 
 ### Changed

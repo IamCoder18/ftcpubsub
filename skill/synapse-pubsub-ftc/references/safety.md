@@ -34,6 +34,6 @@ The four properties Synapse provides around FTC hardware access. Each cites the 
 
 **Claim.** If `SafeOpMode.loop()` ever runs on the hardware thread, Synapse throws `IllegalStateException` immediately rather than silently corrupting the bus.
 
-**Where it's enforced.** `src/main/java/com/aaravlabs/synapse/ftc/SafeOpMode.java:62-66` (`hardware.assertNotHardwareThread()` at the top of `loop()`).
+**Where it's enforced.** `src/main/java/com/aaravlabs/synapse/ftc/SafeOpMode.java:71-76` (`hardware.assertNotHardwareThread()` at the top of `loop()`).
 
 **Test.** `src/test/java/com/aaravlabs/synapse/ftc/HardwareActionsTest.java` — exercises the `isHardwareThread` and `assertNotHardwareThread` paths.

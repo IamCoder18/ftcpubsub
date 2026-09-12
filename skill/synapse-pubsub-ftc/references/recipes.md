@@ -1,6 +1,6 @@
 # Synapse recipes
 
-Condensed copy-paste patterns for the most common FTC problems. Variables come from a `SafeOpMode` subclass (e.g. `orch`, `hardware`, `safeMap`, `gamepad1`), so use those names when copying snippets into your own code.
+Condensed copy-paste patterns for the most common FTC problems. Variables come from a `SafeOpMode` subclass (e.g. `orchestrator`, `hardware`, `safeMap`, `gamepad1`), so use those names when copying snippets into your own code.
 
 ## Mecanum drive (robot-centric)
 
@@ -17,10 +17,10 @@ public class Mecanum extends SafeOpMode {
     }
 
     public static class DriveNode extends Node {
-        DriveNode(Orchestrator orch, SafeDevice<DcMotorEx> fl, SafeDevice<DcMotorEx> fr,
+        DriveNode(Orchestrator orchestrator, SafeDevice<DcMotorEx> fl, SafeDevice<DcMotorEx> fr,
                   SafeDevice<DcMotorEx> bl, SafeDevice<DcMotorEx> br) {
-            super(orch);
-            this.orchestrator = orch;
+            super(orchestrator);
+            this.orchestrator = orchestrator;
             this.fl = fl; this.fr = fr; this.bl = bl; this.br = br;
         }
         private final Orchestrator orchestrator;

@@ -41,8 +41,8 @@ Take the per-subsystem code and put it in a `Node`:
 
 ```java
 public class IntakeNode extends Node {
-    IntakeNode(Orchestrator orch, SafeDevice<DcMotorEx> intake) {
-        super(orch); this.intake = intake;
+    IntakeNode(Orchestrator orchestrator, SafeDevice<DcMotorEx> intake) {
+        super(orchestrator); this.intake = intake;
     }
     private final SafeDevice<DcMotorEx> intake;
 

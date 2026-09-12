@@ -44,7 +44,7 @@ public void updatePID() { motor.setPower(pid.update(encoder.getCurrentPosition()
 - Target: method
 - Attributes: `value()` (required, string — the action name)
 - Repeatable: no
-- Runtime contract: registered into a name → method map. `orch.runAction("name")` returns a `CompletableFuture<Void>` that completes when the method returns.
+- Runtime contract: registered into a name → method map. `orchestrator.runAction("name")` returns a `CompletableFuture<Void>` that completes when the method returns.
 - Method signature: takes no parameters, returns void.
 
 ```java

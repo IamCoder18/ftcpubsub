@@ -8,7 +8,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
  *
  * <p>Usage:
  * <pre>{@code
- * SafeHardwareMap safe = new SafeHardwareMap(hardwareMap, orch.hardware());
+ * SafeHardwareMap safe = new SafeHardwareMap(hardwareMap, orchestrator.hardware());
  * SafeDevice<DcMotorEx> intake = safe.device(DcMotorEx.class, "intake");
  * intake.run(m -> m.setPower(0.5));
  * }</pre>

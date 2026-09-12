@@ -21,9 +21,9 @@ public class Mecanum extends SafeOpMode {
     }
 
     public static class DriveNode extends Node {
-        DriveNode(Orchestrator orch, SafeDevice<DcMotorEx> fl, SafeDevice<DcMotorEx> fr,
+        DriveNode(Orchestrator orchestrator, SafeDevice<DcMotorEx> fl, SafeDevice<DcMotorEx> fr,
                   SafeDevice<DcMotorEx> bl, SafeDevice<DcMotorEx> br) {
-            super(orch); this.fl = fl; this.fr = fr; this.bl = bl; this.br = br;
+            super(orchestrator); this.fl = fl; this.fr = fr; this.bl = bl; this.br = br;
         }
         private final SafeDevice<DcMotorEx> fl, fr, bl, br;
 
