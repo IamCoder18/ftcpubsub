@@ -20,8 +20,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 /**
- * Default {@link Orchestrator} implementation. Owns the topic registry, the two
- * thread pools, the node registry, and the action registry.
+ * Default {@link Orchestrator} implementation. Owns the topic registry, the
+ * four workers (scheduler pool, callback pool, action pool, and the dedicated
+ * hardware thread), the node registry, and the action registry.
  *
  * <p>Thread-pool layout:
  * <ul>
@@ -35,6 +36,10 @@ import java.util.function.Consumer;
  *   <li><b>Action pool</b> ({@link ThreadPoolExecutor}, core 0, unbounded max, {@link
  *       SynchronousQueue}) runs {@link com.aaravlabs.synapse.annotation.RunnableAction}
  *       methods. Unbounded so a long action cannot be rejected.</li>
+ *   <li><b>Hardware thread</b> (single dedicated thread) runs every piece of
+ *       hardware-touching work: {@code @OnHardwareThread} callbacks,
+ *       {@code @RunPeriodically(hardware = true)} loops, and everything submitted
+ *       through {@link com.aaravlabs.synapse.ftc.HardwareActions}.</li>
  * </ul>
  */
 public final class OrchestratorImpl implements Orchestrator {

@@ -27,6 +27,15 @@ import java.util.concurrent.TimeoutException;
  * hardware thread. Code that touches {@code HardwareMap} devices should always
  * go through this facade.
  *
+ * <p><b>Never call {@link #call} (or {@link SafeDevice#call}) from code that is
+ * already running on the hardware thread</b> — inside a
+ * {@code @RunPeriodically(hardware = true)} loop, an {@code @OnHardwareThread}
+ * subscriber, or a {@link #bulkRead} reader. {@code call} blocks until the
+ * hardware thread finishes the submitted task, but the hardware thread is busy
+ * running your code, so the task can never start and the robot hangs forever.
+ * Code already on the hardware thread should use {@link SafeDevice#raw()} and
+ * touch the device directly.
+ *
  * <p>Obtain an instance via {@code orchestrator.hardware()}.
  */
 public final class HardwareActions {
@@ -44,6 +53,8 @@ public final class HardwareActions {
     /**
      * Schedule {@code action} to run on the hardware thread. Returns immediately;
      * the action runs in the future on the dedicated hardware thread.
+     *
+     * @param action the runnable to execute on the hardware thread
      */
     public void run(Runnable action) {
         orchestrator.runOnHardwareThread(action);
@@ -62,7 +73,15 @@ public final class HardwareActions {
      * waits, but the hardware thread can still service other queued work in
      * parallel (sequentially, on its single thread).
      *
-     * @throws Exception whatever the callable threw
+     * <p><b>Deadlock warning:</b> calling this from code that already runs on the
+     * hardware thread (a {@code hardware = true} loop, an {@code @OnHardwareThread}
+     * subscriber, or a {@link #bulkRead} reader) blocks the hardware thread on
+     * itself and hangs the robot. Use {@link SafeDevice#raw()} there instead.
+     *
+     * @param action the callable to execute on the hardware thread
+     * @param <T> the result type
+     * @return the value the callable produced
+     * @throws Exception whatever the callable threw (unwrapped from the future)
      */
     public <T> T call(Callable<T> action) throws Exception {
         CompletableFuture<T> f = new CompletableFuture<>();
@@ -92,6 +111,14 @@ public final class HardwareActions {
 
     /**
      * Same as {@link #call(Callable)} but with an explicit timeout.
+     *
+     * @param action the callable to execute on the hardware thread
+     * @param timeout maximum time to wait for the result
+     * @param unit the timeout unit
+     * @param <T> the result type
+     * @return the value the callable produced
+     * @throws TimeoutException if the hardware thread did not finish in time
+     * @throws Exception whatever the callable threw (unwrapped from the future)
      */
     public <T> T call(Callable<T> action, long timeout, TimeUnit unit) throws Exception {
         CompletableFuture<T> f = new CompletableFuture<>();
@@ -121,7 +148,13 @@ public final class HardwareActions {
 
     /**
      * Schedule {@code action} on the hardware thread; return a future that
-     * completes with the action's result. Non-blocking.
+     * completes with the action's result. Non-blocking, so this is safe to call
+     * from the hardware thread itself (unlike {@link #call(Callable)}).
+     *
+     * @param action the callable to execute on the hardware thread
+     * @param <T> the result type
+     * @return a future that completes with the result, or exceptionally if the
+     *         callable threw
      */
     public <T> CompletableFuture<T> callAsync(Callable<T> action) {
         CompletableFuture<T> f = new CompletableFuture<>();
@@ -156,6 +189,10 @@ public final class HardwareActions {
      * or {@code @RunPeriodically(hardware = true)} loops.
      *
      * <p>Returns a handle that can be passed to {@link #stopBulkRead} to cancel.
+     *
+     * @param hz how often the reader runs (must be &gt; 0)
+     * @param reader invoked on the hardware thread at the given rate
+     * @return a handle for cancellation
      */
     public BulkReadHandle bulkRead(int hz, BulkReader reader) {
         return orchestrator.scheduleHardwareBulkRead(hz, reader);
@@ -163,7 +200,9 @@ public final class HardwareActions {
 
     /**
      * Cancel a previously-registered bulk-read. Safe to call on an already-stopped
-     * handle.
+     * or null handle.
+     *
+     * @param handle the handle returned by {@link #bulkRead}
      */
     public void stopBulkRead(BulkReadHandle handle) {
         if (handle != null) handle.cancel();
@@ -198,9 +237,10 @@ public final class HardwareActions {
     }
 
     /**
-     * Called once per OpMode loop iteration. Processes any pending hardware-thread
-     * tasks. {@code SafeOpMode.loop()} calls this for you; if you don't use
-     * {@code SafeOpMode}, call it yourself.
+     * Called once per OpMode loop iteration. Currently a no-op: the hardware thread
+     * processes its own queue independently. Reserved for a future hook (e.g.
+     * flushing telemetry). {@code SafeOpMode.loop()} calls this for you; if you
+     * don't use {@code SafeOpMode}, call it yourself.
      */
     public void tick() {
         // Currently a no-op: the hardware thread processes its own queue
@@ -208,8 +248,10 @@ public final class HardwareActions {
     }
 
     /**
-     * Shut down the underlying hardware thread. Called by {@code SafeOpMode.stop()}.
-     * After this, all hardware methods will be ignored.
+     * Shut down the underlying hardware thread — which, despite the name, closes
+     * the <b>entire orchestrator</b> (all pools, all nodes), not just hardware
+     * access. {@code SafeOpMode.stop()} already closes the orchestrator for you,
+     * so you rarely need this.
      */
     public void shutdown() {
         orchestrator.close();

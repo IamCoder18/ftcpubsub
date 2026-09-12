@@ -9,29 +9,31 @@ import java.lang.annotation.Target;
 /**
  * Marks a method to be invoked on a fixed-rate loop at up to {@link #hz()} hertz.
  *
- * <p>Methods must take no parameters and return void. They run on the orchestrator's
- * dedicated scheduling thread pool, separate from the callback pool used to deliver
- * {@link SubscribedTo} callbacks.
+ * <p>Methods must take no parameters and return void, and must not be static. They run
+ * on the orchestrator's dedicated scheduling thread pool, separate from the callback
+ * pool used to deliver {@link SubscribedTo} callbacks.
  *
  * <p>The implementation uses fixed-delay scheduling: the next invocation starts
  * {@code 1000 / hz} milliseconds after the previous one <em>finishes</em>, so a slow
- * loop will not overlap itself.
+ * loop will not overlap itself, and the effective rate is {@code hz} or lower. The
+ * first invocation happens immediately after registration. Exceptions thrown by the
+ * loop body are logged and the loop keeps running.
  *
  * <p>Set {@link #hardware()} to {@code true} to route the loop to the orchestrator's
  * <b>single dedicated hardware thread</b>. Use this for periodic loops that read or
- * write FTC hardware — for example, a 50 Hz PID controller that sets motor power
- * every tick. See {@link OnHardwareThread} for the full rationale.
+ * write FTC hardware — for example, a 50 Hz drive loop that sets motor power every
+ * tick. See {@link OnHardwareThread} for the full rationale.
  *
  * <p>Example:
  * <pre>{@code
  * @RunPeriodically(hz = 50)
  * public void update() {
- *     drivetrain.drive(gamepad.left_stick_x, gamepad.right_stick_x);
+ *     // math or state machines — no hardware access
  * }
  *
  * @RunPeriodically(hz = 50, hardware = true)
- * public void updatePID() {
- *     motor.setPower(pid.update(encoder.getCurrentPosition()));
+ * public void drive() {
+ *     fl.run(m -> m.setPower(powerFL));
  * }
  * }</pre>
  */

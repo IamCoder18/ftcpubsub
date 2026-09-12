@@ -27,12 +27,21 @@ import java.util.function.Function;
  * intake.run(m -> m.setPower(0.5));                     // async, safe
  * int pos = intake.call(DcMotorEx::getCurrentPosition); // sync, blocks caller
  * }</pre>
+ *
+ * @param <T> the wrapped hardware type (e.g. {@code DcMotorEx})
  */
 public final class SafeDevice<T> {
 
     private final T raw;
     private final HardwareActions hardware;
 
+    /**
+     * Wrap a raw hardware object. Prefer {@link SafeHardwareMap#device} over
+     * calling this directly.
+     *
+     * @param raw the raw device instance
+     * @param hardware the hardware-thread facade to route through
+     */
     public SafeDevice(T raw, HardwareActions hardware) {
         this.raw = raw;
         this.hardware = hardware;
@@ -41,6 +50,8 @@ public final class SafeDevice<T> {
     /**
      * Schedule {@code action} to run on the hardware thread with this device as
      * its argument. Returns immediately.
+     *
+     * @param action receives the raw device
      */
     public void run(Consumer<? super T> action) {
         hardware.run(() -> action.accept(raw));
@@ -49,6 +60,16 @@ public final class SafeDevice<T> {
     /**
      * Run {@code action} on the hardware thread, blocking the caller until it
      * completes. Returns the value produced by {@code action}.
+     *
+     * <p><b>Deadlock warning:</b> calling this from code that already runs on the
+     * hardware thread (a {@code hardware = true} loop, an {@code @OnHardwareThread}
+     * subscriber, or a bulk-read reader) blocks the hardware thread on itself and
+     * hangs the robot. Use {@link #raw()} there instead.
+     *
+     * @param action receives the raw device and produces a value
+     * @param <R> the result type
+     * @return the value produced by {@code action}
+     * @throws Exception whatever {@code action} threw
      */
     public <R> R call(Function<? super T, ? extends R> action) throws Exception {
         return hardware.call(() -> action.apply(raw));
@@ -56,7 +77,12 @@ public final class SafeDevice<T> {
 
     /**
      * Apply {@code action} to the device on the hardware thread; return a
-     * {@link java.util.concurrent.CompletableFuture} for the result. Non-blocking.
+     * {@link java.util.concurrent.CompletableFuture} for the result. Non-blocking,
+     * so this is safe to call from the hardware thread itself.
+     *
+     * @param action receives the raw device and produces a value
+     * @param <R> the result type
+     * @return a future that completes with the result
      */
     public <R> java.util.concurrent.CompletableFuture<R> callAsync(
             Function<? super T, ? extends R> action) {
@@ -67,8 +93,10 @@ public final class SafeDevice<T> {
      * Get the raw, unwrapped hardware object. <b>Use with caution</b>: any method
      * you call on the returned object runs on the caller's thread, not the hardware
      * thread. Only use this from inside a {@link HardwareActions#run} callback,
-     * a {@code @OnHardwareThread} subscriber, or another piece of code already
-     * executing on the hardware thread.
+     * a {@code @OnHardwareThread} subscriber, a {@code hardware = true} loop, or
+     * another piece of code already executing on the hardware thread.
+     *
+     * @return the unwrapped hardware object
      */
     public T raw() {
         return raw;

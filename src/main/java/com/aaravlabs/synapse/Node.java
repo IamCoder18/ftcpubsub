@@ -41,6 +41,12 @@ public abstract class Node implements AutoCloseable {
 
     protected final Orchestrator orchestrator;
 
+    /**
+     * Create a node bound to the given orchestrator. Every subclass constructor must
+     * call {@code super(orchestrator)}.
+     *
+     * @param orchestrator the bus this node publishes to and reads from
+     */
     protected Node(Orchestrator orchestrator) {
         this.orchestrator = orchestrator;
     }

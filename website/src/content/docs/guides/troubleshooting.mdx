@@ -1,0 +1,79 @@
+---
+title: Troubleshooting
+description: Every common Synapse failure with its cause and fix.
+---
+
+# Troubleshooting
+
+## `IllegalStateException: This code is running on the hardware thread...`
+
+**Where:** thrown from `SafeOpMode.loop()` (every iteration) or from your own `assertNotHardwareThread()` call.
+
+**Cause:** `onSafeLoop()` (or something it calls) executed on the hardware thread. This almost always means hardware-thread code scheduled work back onto the OpMode thread, or a `loop()` override forgot to call `super.loop()`.
+
+**Fix:** `onSafeLoop()` should only read topics (`getLatestValue`) and update telemetry. If you overrode `loop()` itself, make sure `super.loop()` runs.
+
+## The robot hangs (telemetry freezes, nothing crashes)
+
+**Cause:** `hardware.call(...)` or `device.call(...)` was invoked **from code already on the hardware thread** — a `@RunPeriodically(hardware = true)` loop, an `@OnHardwareThread` subscriber, or a `bulkRead` reader. The single hardware thread blocks waiting on a task it can never start. This is a guaranteed deadlock, not a flake.
+
+**Fix:** inside hardware-thread code, use `device.raw()` to touch the device directly, or `callAsync(...)` (non-blocking) if a future is genuinely needed. `call(...)` is only for callers *outside* the hardware thread.
+
+## `IllegalArgumentException: Topic 'x' is typed Double but publish got Integer`
+
+**Cause:** the topic's type was fixed (usually by auto-creation from the first publish) and a later value has an incompatible runtime type. A common version: the first publish passed an `int` literal, locking the topic to `Integer`.
+
+**Fix:** declare shared topics explicitly — `orchestrator.getOrCreateTopic("x", Double.class)` at the top of the owning node — and publish `double` literals (`1.0`, not `1`). See [Topics](/docs/concepts/topics#typing).
+
+## A `@SubscribedTo` method never fires
+
+Check, in order:
+
+1. **The topic type vs the parameter type.** A mismatched message is silently dropped, never logged. A `Boolean` param on a `Double` topic never fires.
+2. **The topic name matches exactly.** `g1/right_bumper` vs `g1/rightBumper` — the adaptor uses the SDK field names, all lowercase with underscores.
+3. **The node is registered.** `registerNode` does the binding; a missing (or duplicate-name) registration silently does nothing.
+4. **You expected an edge but subscribed to the state.** `/rising` fires once per press; the base `g1/a` topic fires continuously.
+
+## A subsystem does nothing at all
+
+1. **Duplicate node name.** The second `registerNode("drive", ...)` is a no-op that logs a warning; only the first node binds.
+2. **The loop threw during init.** A `@RunPeriodically` with `hz <= 0` logs a warning and is skipped.
+3. **The action name collides.** A second `@RunnableAction("fire")` is skipped with a warning — only the first registers.
+
+All three write WARN lines to Logcat — filter on the orchestrator tag (`ftc`) to see them.
+
+## `IllegalArgumentException` at `onSafeInit` — "must take no parameters"
+
+The annotation binder rejects structural mistakes at registration time:
+
+- `@SubscribedTo` methods with 2+ parameters,
+- `@RunPeriodically`/`@RunnableAction` methods with any parameters,
+- `@RunnableAction` methods that don't return `void`,
+- any annotated method that is `static`.
+
+Fix the signature; the binding is exactly what the error says.
+
+## Gradle can't resolve `com.aaravlabs:synapse`
+
+- **401 Unauthorized** — the token is missing `read:packages`, or `githubUser`/`githubToken` are misspelled in `~/.gradle/gradle.properties`.
+- **Could not resolve** — the `maven { ... }` block landed in the wrong file or block; it belongs in the project `repositories {}` of `build.dependencies.gradle`. See [Install](/docs/get-started/install).
+
+## The OpMode doesn't appear in the Driver Station list
+
+- The class needs `@TeleOp(name = "...", group = "...")` (or `@Autonomous`).
+- The Robot Controller app needs to be restarted after a config change; a failed Gradle sync means stale APK.
+- Check the log for an exception in `onSafeInit()` — while `init()` failures usually surface as a crash dialog, some appear only in Logcat.
+
+## R8 strips annotations in release builds
+
+Synapse ships its keep rules inside the JAR (`META-INF/proguard/synapse.pro`) and CI runs the suite through minification, so this shouldn't happen. If you maintain a custom `proguard-rules.pro` that overrides consumer rules, re-add:
+
+```properties
+-keep class com.aaravlabs.synapse.** { *; }
+-keep @com.aaravlabs.synapse.annotation.* class *
+```
+
+## Next steps
+
+- [Testing](/docs/guides/testing) — verify behavior before it reaches the field.
+- [Architecture](/docs/concepts/architecture) — the threading rules behind most of these errors.

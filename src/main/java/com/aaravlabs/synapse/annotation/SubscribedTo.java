@@ -14,17 +14,21 @@ import java.lang.annotation.Target;
  * <ul>
  *   <li>{@code void onX()} — fires on every message, ignoring the value.</li>
  *   <li>{@code void onX(T msg)} — fires with the published value. The parameter type
- *       must match the topic's type (or be a supertype of it).</li>
+ *       must match the topic's type (or be a supertype of it); primitive and wrapper
+ *       types are interchangeable. A message that is not an instance of the
+ *       parameter type is silently dropped rather than throwing, so one handler
+ *       can guard its own types.</li>
  * </ul>
  *
  * <p>Repeating the annotation on a single method lets one method subscribe to multiple
- * topics.
+ * topics. Combine with {@link OnHardwareThread} to run the handler on the dedicated
+ * hardware thread.
  *
  * <p>Example:
  * <pre>{@code
  * @SubscribedTo(topic = "intake/set/power")
  * public void setIntakePower(double power) {
- *     intake.setPower(power);
+ *     intakeDevice.run(m -> m.setPower(power));
  * }
  * }</pre>
  */

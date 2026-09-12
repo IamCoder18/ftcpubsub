@@ -1,9 +1,11 @@
 ---
 title: First OpMode
-description: A complete, copy-pasteable TeleOp that drives a single motor.
+description: A complete, copy-pasteable TeleOp that drives one motor from a gamepad stick.
 ---
 
 # First OpMode
+
+This page gets a single motor spinning from the left stick. It assumes you have already [installed Synapse](/docs/get-started/install). The whole OpMode is one file — copy it into `TeamCode/src/main/java/org/firstinspires/ftc/teamcode/` and change the device name if yours is different.
 
 ```java
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -43,11 +45,29 @@ public class SynapseFirst extends SafeOpMode {
 }
 ```
 
-That's it. Push the left stick forward and the motor spins.
+Push the left stick forward and the motor spins at 50 Hz.
 
-## What's happening
+## What each line does
 
-1. `safeMap.device(...)` returns a `SafeDevice<DcMotorEx>` — every method on it routes through the hardware thread (`SafeDevice.java:45-47`).
-2. `GamepadAdaptor.attach(...)` reflects `gamepad1`'s fields onto the `g1/...` topics (`GamepadAdaptor.java:94-99`).
-3. The `@RunPeriodically(hz = 50, hardware = true)` loop runs on the single hardware thread (`RunPeriodically.java:42-50`, `OrchestratorImpl.java:93-94`).
-4. `SafeOpMode.loop()` calls `hardware.assertNotHardwareThread()` on every tick (`SafeOpMode.java:71-76`) so a misconfigured loop fails fast.
+1. `safeMap.device(DcMotorEx.class, "motor")` looks the device up in `hardwareMap` and wraps it in a `SafeDevice<DcMotorEx>`. Every call through the wrapper runs on the dedicated hardware thread — never on whatever thread happens to call it.
+2. `orchestrator.registerNode("drive", ...)` binds the node: every annotated method in `DriveNode` is wired up at this moment. This is why the OpMode calls `registerNode` — nodes never register themselves.
+3. `GamepadAdaptor.attach(orchestrator, gamepad1, "g1")` publishes every button and axis of `gamepad1` onto topics named `g1/...` at 60 Hz. Left stick Y now lives at `g1/left_stick_y` as a `Float`.
+4. `@RunPeriodically(hz = 50, hardware = true)` runs `drive()` every 20 ms **on the hardware thread**. The `hardware = true` flag is what makes touching motors safe — leave it off and the loop would run on the scheduler pool, where hardware calls are forbidden.
+5. Inside the loop, `orchestrator.getLatestValue(...)` reads the most recent axis value without subscribing. `orElse(0.0)` covers the moments before the first gamepad tick arrives.
+6. `motor.run(...)` submits the `setPower` call to the hardware thread. Inside a `hardware = true` loop you are already on that thread, so the call is queued to itself and executes immediately after.
+
+> **Axes are `Float`, not `Double`.** `GamepadAdaptor` publishes the SDK's `float` fields, so `getLatestValue(name, Float.class)` is the correct fetch, and `.map(Float::doubleValue)` converts for math. Fetching with `Double.class` silently returns an empty `Optional` because the types do not match.
+
+> **Forward is negative.** FTC sticks rest at −1 when pushed fully forward, hence the leading minus. Without it the motor would drive backwards.
+
+> **Nothing moves after pressing Init?** Hardware only starts moving after **Start** — `onSafeInit` runs at init, but the 50 Hz loop ticks only in `loop()`. Watch the Driver Station state, not just the log.
+
+## Verify the direction
+
+Motor direction depends on wiring. Before driving with real hardware, run a [direction test](/docs/recipes/mecanum-drive#step-3-verify-motor-directions) that spins each motor individually from a button — the pattern used on a real robot before the first drive.
+
+## Next steps
+
+- [Mecanum drive](/docs/recipes/mecanum-drive) — the full four-motor pattern, robot-validated.
+- [Architecture](/docs/concepts/architecture) — what `hardware = true` actually does, and what runs where.
+- [SafeOpMode](/docs/ftc/safe-opmode) — all five lifecycle hooks.

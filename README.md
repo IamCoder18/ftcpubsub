@@ -9,54 +9,55 @@
 A tiny, annotation-driven pub/sub bus for **FIRST** Tech Challenge robot code.
 
 Write `Node`s that talk to each other through named, typed **topics** instead
-of direct references. The orchestrator manages threads, so `@SubscribedTo`
+of direct references. The orchestrator manages the threads, so `@SubscribedTo`
 callbacks and `@RunPeriodically` loops never block each other, and **all
 hardware-touching code runs on a single dedicated thread** — the only safe
 way to use `DcMotorEx`, servos, sensors, and bulk reads in an FTC program.
 
-> 40 KB JAR. Zero runtime dependencies. R8-minify-safe.
+> ~40 KB JAR. Zero runtime dependencies. R8-minify-safe.
 
 ```java
 @TeleOp(name = "Demo", group = "Test")
 public class DemoOpMode extends SafeOpMode {
+    private SafeDevice<DcMotorEx> intake;
+
     @Override protected void onSafeInit() {
-        SafeDevice<DcMotorEx> intake = safeMap.device(DcMotorEx.class, "intake");
+        intake = safeMap.device(DcMotorEx.class, "intake");
+        orchestrator.registerNode("intake", new IntakeNode(orchestrator, intake));
         GamepadAdaptor.attach(orchestrator, gamepad1, "g1");
     }
 
     @Override protected void onSafeLoop() {
-        telemetry.addData("intake", orchestrator.getLatestValue("intake/power", Double.class).orElse(0.0));
+        telemetry.addData("power", orchestrator.getLatestValue("intake/power", Double.class).orElse(0.0));
         telemetry.update();
     }
 
     public static class IntakeNode extends Node {
-        IntakeNode(Orchestrator o, SafeDevice<DcMotorEx> intake) { super(o); this.intake = intake; }
+        IntakeNode(Orchestrator orch, SafeDevice<DcMotorEx> intake) { super(orch); this.intake = intake; }
         private final SafeDevice<DcMotorEx> intake;
+        private boolean running;
 
         @SubscribedTo(topic = "g1/right_bumper/rising")
         @OnHardwareThread
-        public void onPress(Boolean v) { intake.run(m -> m.setPower(1.0)); }
+        public void onPress(Boolean v) {
+            running = true;
+            intake.run(m -> m.setPower(1.0));
+        }
 
         @SubscribedTo(topic = "g1/right_bumper/falling")
         @OnHardwareThread
-        public void onRelease(Boolean v) { intake.run(m -> m.setPower(0.0)); }
+        public void onRelease(Boolean v) {
+            running = false;
+            intake.run(m -> m.setPower(0.0));
+        }
+
+        @RunPeriodically(hz = 10)
+        public void publishState() {
+            orchestrator.publish("intake/power", running ? 1.0 : 0.0);
+        }
     }
 }
 ```
-
-## Table of contents
-
-- [Why Synapse?](#why-synapse)
-- [Why pub/sub for FTC?](#why-pubsub-for-ftc)
-- [Quickstart](#quickstart)
-- [Concepts](#concepts)
-- [Hardware threading — the most important section](#hardware-threading--the-most-important-section)
-- [Threading model](#threading-model)
-- [Installation](#installation)
-- [API reference](#api-reference)
-- [Testing & development](#testing--development)
-- [Contributing](#contributing)
-- [License](#license)
 
 ## Why Synapse?
 
@@ -71,14 +72,14 @@ smallest** library in the niche:
   in `SafeOpMode.loop()` makes off-thread hardware access fail fast, not
   silently corrupt your I²C bus.
 - **Three-layer API.** Annotations (`@SubscribedTo`, `@RunPeriodically`,
-  `@RunnableAction`), a `HardwareActions` facade (`run`, `call`, `callAsync`,
-  `bulkRead`), and `SafeDevice<T>` wrappers. Use whichever matches your
-  style.
+  `@RunnableAction`, `@OnHardwareThread`), a `HardwareActions` facade (`run`,
+  `call`, `callAsync`, `bulkRead`), and `SafeDevice<T>` wrappers. Use
+  whichever matches the call site.
 - **Backpressure that respects deadlines.** Separate pools for periodic and
   callback work, with a bounded queue and `CallerRunsPolicy` so a slow
   subscriber slows the publisher instead of dropping messages. An unbounded
   action pool keeps one-shot invocations from being rejected under load.
-- **Zero runtime dependencies.** 40 KB JAR. R8 survival is verified by
+- **Zero runtime dependencies.** ~40 KB JAR. R8 survival is verified by
   running the test suite through minification.
 - **Gamepad-to-topic in one line.** `GamepadAdaptor.attach(orchestrator, gamepad1, "g1")`
   publishes buttons (current, rising, falling) and axes at 60 Hz.
@@ -125,35 +126,75 @@ public class SynapseDemo extends SafeOpMode {
 
         @RunPeriodically(hz = 50, hardware = true)
         public void drive() {
-            double y = orchestrator.getLatestValue("g1/left_stick_y", Double.class).orElse(0.0);
-            double r = orchestrator.getLatestValue("g1/right_stick_y", Double.class).orElse(0.0);
-            left.run(m -> m.setPower(-y));
-            right.run(m -> m.setPower(-r));
+            double y = -orchestrator.getLatestValue("g1/left_stick_y", Float.class).map(Float::doubleValue).orElse(0.0);
+            double r = -orchestrator.getLatestValue("g1/right_stick_y", Float.class).map(Float::doubleValue).orElse(0.0);
+            left.run(m -> m.setPower(y));
+            right.run(m -> m.setPower(r));
         }
     }
 }
 ```
 
+Full walkthrough in the
+[First OpMode docs](https://github.com/IamCoder18/synapse/blob/main/website/src/content/docs/get-started/first-opmode.mdx);
+a robot-validated drivetrain in the
+[Mecanum drive recipe](https://github.com/IamCoder18/synapse/blob/main/website/src/content/docs/recipes/mecanum-drive.mdx).
+
+## The one rule
+
+> **All hardware access happens on the hardware thread. Nothing else.**
+
+FTC hardware is not thread-safe. Synapse funnels every hardware operation
+onto one OS thread so races cannot happen by construction, and gives you
+three layers to route code there:
+
+```java
+// Layer 1 — annotations (the binder routes these for you)
+@SubscribedTo(topic = "intake/set/power")
+@OnHardwareThread
+public void onTarget(double power) { intake.run(m -> m.setPower(power)); }
+
+@RunPeriodically(hz = 50, hardware = true)
+public void drive() { left.raw().setPower(powerFL); }   // already on the thread
+
+// Layer 2 — the HardwareActions facade, from anywhere else
+hardware.run(() -> motor.setPower(0.5));
+double pos = hardware.call(() -> motor.getCurrentPosition());
+
+// Layer 3 — SafeDevice wrappers
+SafeDevice<DcMotorEx> intake = safeMap.device(DcMotorEx.class, "intake");
+intake.run(m -> m.setPower(0.5));
+```
+
+And the mirror rule: **code already on the hardware thread must never block
+waiting for it.** Calling `hardware.call(...)` / `device.call(...)` from
+inside a `hardware = true` loop, an `@OnHardwareThread` subscriber, or a
+bulk-read reader deadlocks the robot — use `device.raw()` there.
+
 ## Concepts
 
 ### Topics
 
-A topic is a named, typed channel. Create with
-`orchestrator.getOrCreateTopic(name, type)`, publish with
-`orchestrator.publish(name, value)`, fetch with
-`orchestrator.getLatestValue(name, type)`.
+A topic is a named, typed channel. Create explicitly with
+`orchestrator.getOrCreateTopic(name, type)` (recommended for anything shared —
+it pins the type in one place) or implicitly on first publish. Read back with
+`orchestrator.getLatestValue(name, type)`, which returns an `Optional`.
+
+Types are checked with assignability, and primitives and wrappers are
+normalized — a `double` parameter binds cleanly to a `Double` topic.
 
 ### Subscribing
 
-Three ways, pick whichever fits:
+Three ways, pick per call site:
 
 ```java
 // 1) Programmatic — returns a Subscription you can unsubscribe later.
-orchestrator.subscribe("intake/set/power", Double.class, p -> intake.setPower(p));
+orchestrator.subscribe("intake/set/power", Double.class,
+        p -> intake.run(m -> m.setPower(p)));
 
-// 2) Annotation — declared on a Node method, wired automatically.
+// 2) Annotation — declared on a Node method, wired at registerNode.
 @SubscribedTo(topic = "intake/set/power")
-public void onSetPower(double power) { intake.setPower(power); }
+public void onSetPower(double power) { target = power; }
 
 // 3) Fetch the latest value on demand — no subscription needed.
 Optional<Double> latest = orchestrator.getLatestValue("intake/set/power", Double.class);
@@ -162,113 +203,47 @@ Optional<Double> latest = orchestrator.getLatestValue("intake/set/power", Double
 ### Periodic loops
 
 ```java
-@RunPeriodically(hz = 50)
-public void update() { /* runs on the scheduler pool */ }
+@RunPeriodically(hz = 50)                    // scheduler pool (8 threads)
+public void update() { /* math */ }
 
-@RunPeriodically(hz = 50, hardware = true)
-public void update() { motor.setPower(...); /* runs on the hardware thread */ }
+@RunPeriodically(hz = 50, hardware = true)   // the hardware thread
+public void drive() { motor.raw().setPower(...); }
 ```
+
+Fixed-delay scheduling: the next run starts `1000 / hz` ms after the previous
+*finishes*, so slow loops never overlap and the effective rate is `hz` or
+lower. Exceptions are logged; the loop keeps running.
 
 ### Hardware-thread API
 
 ```java
 HardwareActions hw = orchestrator.hardware();
 
-hw.run(() -> motor.setPower(0.5));
-double pos = hw.call(() -> motor.getCurrentPosition());
-CompletableFuture<Double> future = hw.callAsync(() -> motor.getCurrentPosition());
+hw.run(() -> motor.setPower(0.5));                      // async
+double pos = hw.call(() -> motor.getCurrentPosition()); // blocks caller
+CompletableFuture<Double> f = hw.callAsync(() -> motor.getCurrent(CurrentUnit.AMPS));
 
 hw.bulkRead(50, view -> {
-    double amps = motor.getCurrent(CurrentUnit.AMPS);
+    double amps = motor.getCurrent(CurrentUnit.AMPS);   // on the hardware thread
     view.publish("motor/amps", amps);
 });
 ```
 
 ### Gamepad
 
-`GamepadAdaptor.attach(orchestrator, gamepad1, "g1")` publishes:
+`GamepadAdaptor.attach(orchestrator, gamepad1, "g1")` pre-creates and publishes
+at 60 Hz:
 
 | Topic                  | Type    | Meaning                              |
 | ---------------------- | ------- | ------------------------------------ |
-| `g1/<button>`          | Boolean | current state                        |
+| `g1/<button>`          | Boolean | current state, every poll            |
 | `g1/<button>/rising`   | Boolean | fires (value=true) on 0→1 transition |
 | `g1/<button>/falling`  | Boolean | fires on 1→0 transition              |
 | `g1/<axis>`            | Float   | current value                        |
 
-## Hardware threading — the most important section
-
-> [!IMPORTANT]
-> FTC hardware is **not thread-safe**. Calling `setPower`, `setPosition`, or
-> reading any sensor from two threads at the same time produces race
-> conditions, garbled serial-bus responses, or
-> `ConcurrentModificationException` crashes deep in the SDK.
-
-Synapse gives you **three layers** of hardware-thread safety. Use whichever
-matches your code style.
-
-### Layer 1: Annotations on Node methods
-
-```java
-@SubscribedTo(topic = "intake/set/power")
-@OnHardwareThread
-public void setPower(double power) {
-    HardwareThread.assertCurrent();   // optional defensive check
-    motor.setPower(power);
-}
-
-@RunPeriodically(hz = 50, hardware = true)
-public void updatePID() {
-    motor.setPower(pid.update(motor.getCurrentPosition()));
-}
-```
-
-### Layer 2: `HardwareActions` facade
-
-```java
-HardwareActions hw = orchestrator.hardware();
-
-hw.run(() -> intake.setPower(0.5));
-double pos = hw.call(() -> intake.getCurrentPosition());
-hw.bulkRead(50, view -> {
-    view.publish("intake/amps", intake.getCurrent(CurrentUnit.AMPS));
-});
-```
-
-### Layer 3: `SafeDevice<T>` and `SafeHardwareMap`
-
-```java
-SafeHardwareMap safe = new SafeHardwareMap(hardwareMap, hw);
-SafeDevice<DcMotorEx> intake = safe.device(DcMotorEx.class, "intake");
-intake.run(m -> m.setPower(0.5));
-int pos = intake.call(DcMotorEx::getCurrentPosition);
-```
-
-### Drop-in `SafeOpMode` template
-
-```java
-public abstract class SafeOpMode extends OpMode {
-    protected Orchestrator orchestrator;
-    protected HardwareActions hardware;
-    protected SafeHardwareMap safeMap;
-
-    @Override public final void init() {
-        orchestrator = com.aaravlabs.synapse.ftc.FtcOrchestrator.create();
-        hardware = orchestrator.hardware();
-        safeMap = new SafeHardwareMap(hardwareMap, hardware);
-        onSafeInit();
-    }
-
-    @Override public final void loop() {
-        hardware.assertNotHardwareThread();   // fails fast if you broke the rule
-        onSafeLoop();
-    }
-
-    @Override public final void stop() { orchestrator.close(); }
-
-    protected abstract void onSafeInit();
-    protected void onSafeLoop() {}
-}
-```
+Every public non-static `boolean`/`float` field of the SDK `Gamepad` is picked
+up automatically — 27 buttons and 10 axes on SDK 11.2, including touchpad and
+`*_trigger_pressed` fields — and future SDK fields appear with no code change.
 
 ## Threading model
 
@@ -276,18 +251,22 @@ The orchestrator runs four distinct workers, each chosen for a specific role:
 
 | Pool              | Threads         | Bounded? | Used for                                      |
 | ----------------- | --------------- | -------- | --------------------------------------------- |
-| **Scheduler**     | 8               | —        | `@RunPeriodically` loops                      |
+| **Scheduler**     | 8               | —        | `@RunPeriodically` loops (non-hardware)       |
 | **Callback**      | 4–16            | 256      | `@SubscribedTo` handlers (with backpressure)  |
 | **Action**        | unbounded       | no       | `@RunnableAction` invocations                 |
 | **Hardware**      | 1 (dedicated)   | —        | All hardware reads/writes                     |
 
-If a callback ever blocks (say, a slow `DcMotorEx` write), it cannot starve a
-periodic loop — they run on separate pools. The callback pool uses
-`CallerRunsPolicy` for backpressure: when the queue fills, the publisher
-slows down instead of dropping messages. The action pool is unbounded so
-that a long action can't be rejected under load.
+A slow subscriber can't starve a periodic loop — they run on separate pools.
+When the callback queue fills, `CallerRunsPolicy` runs the overflow on the
+publisher's thread (backpressure instead of dropped messages). Exceptions in
+subscribers, loops, and actions are logged and never crash the OpMode.
 
 ## Installation
+
+Synapse is hosted on **GitHub Packages**, which requires authentication for
+downloads even though the package is public. A token with the `read:packages`
+scope is all you need. (Maven Central publishing is planned for the next
+release; until then GitHub Packages is the only source.)
 
 Add this to `build.dependencies.gradle` in your FTC project:
 
@@ -310,45 +289,26 @@ dependencies {
 }
 ```
 
-GitHub Packages requires authentication on every download even for public
-packages. Configure credentials via `~/.gradle/gradle.properties`:
+and configure credentials in `~/.gradle/gradle.properties`:
 
 ```properties
 githubUser=<your-github-username>
-githubToken=ghp_your_token_here
+githubToken=<a-token-with-read:packages>
 ```
 
-The token only needs `read:packages` scope.
-
-### Maven Central
-
-`com.aaravlabs:synapse` is also published to Maven Central, so no extra
-configuration is needed:
-
-```gradle
-repositories {
-    mavenCentral()
-}
-dependencies {
-    // Use the latest release: https://github.com/IamCoder18/synapse/releases
-    implementation 'com.aaravlabs:synapse:<version>'
-}
-```
-
-Releases are cut by pushing a `v*` tag; GitHub Actions signs the artifacts
-with GPG, uploads them to the Sonatype Central staging API, and then closes &
-releases the staging repository. Artifacts appear on Maven Central within
-~10–30 minutes of release.
+Full walkthrough with the Kotlin DSL and troubleshooting in the
+[Install docs](https://github.com/IamCoder18/synapse/blob/main/website/src/content/docs/get-started/install.mdx),
+also served at `/docs/get-started/install` on the website.
 
 ## API reference
 
 | Type | Where | Purpose |
 | --- | --- | --- |
-| `Orchestrator` | `com.aaravlabs.synapse.Orchestrator` | The bus. One per robot. |
-| `Node` | `com.aaravlabs.synapse.Node` | An independent unit of code with annotated callbacks. |
-| `Topic<T>` | `com.aaravlabs.synapse.Topic` | A named, typed channel. |
-| `Subscription` | `com.aaravlabs.synapse.Subscription` | Handle returned by `subscribe()`. |
-| `LogSink` | `com.aaravlabs.synapse.LogSink` | Pluggable logging output. |
+| `Orchestrator` | `com.aaravlabs.synapse` | The bus. One per robot. |
+| `Node` | `com.aaravlabs.synapse` | An independent unit of code with annotated callbacks. |
+| `Topic<T>` | `com.aaravlabs.synapse` | A named, typed channel. |
+| `Subscription` | `com.aaravlabs.synapse` | Handle returned by `subscribe()`. |
+| `LogSink` | `com.aaravlabs.synapse` | Pluggable logging output. |
 | `@SubscribedTo` | `com.aaravlabs.synapse.annotation` | Callback on every published value. |
 | `@RunPeriodically` | `com.aaravlabs.synapse.annotation` | Loop at a fixed frequency. |
 | `@RunnableAction` | `com.aaravlabs.synapse.annotation` | One-shot, named, fire-on-demand. |
@@ -360,23 +320,26 @@ releases the staging repository. Artifacts appear on Maven Central within
 | `SafeHardwareMap` | `com.aaravlabs.synapse.ftc` | `HardwareMap` that produces `SafeDevice<T>`s. |
 | `GamepadAdaptor` | `com.aaravlabs.synapse.ftc` | Reflects `Gamepad` fields into topics. |
 | `BulkReader` | `com.aaravlabs.synapse.ftc` | Functional interface for `bulkRead`. |
+| `HardwareView` | `com.aaravlabs.synapse.ftc` | Publish/read surface inside a bulk-read callback. |
+| `AndroidLogSink` | `com.aaravlabs.synapse.ftc` | `LogSink` forwarding to `android.util.Log`. |
 
 ## Testing & development
 
-The library ships with 50+ JUnit 5 tests covering topics, subscriptions,
+The library ships with 51 JUnit 5 tests covering topics, subscriptions,
 periodic loops, two-pool isolation, hardware-thread serial execution, soak
 tests, race conditions, and the real-FTC-SDK `Gamepad` field set.
 
 ```bash
 ./gradlew test                       # run the test suite
+./gradlew javadoc                    # build the Javadoc
 ./gradlew publishToMavenLocal        # install into ~/.m2 for experimentation
 ```
 
 Requirements: JDK 11+, Gradle 9.x.
 
-A real working OpMode that exercises every feature lives in the
-[`PubsubSmokeTest`](https://github.com/ATAARobotics/23684-Canopy-Biobuzz/blob/test/aaravlabs-pubsub/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/PubsubSmokeTest.java)
-in the biobuzz test worktree.
+A real working TeleOp that exercises the library on a competition robot
+(mecanum drive + intake subsystems) is in
+[ATAARobotics/23684-Canopy-Biobuzz PR #3](https://github.com/ATAARobotics/23684-Canopy-Biobuzz/pull/3).
 
 ## Contributing
 

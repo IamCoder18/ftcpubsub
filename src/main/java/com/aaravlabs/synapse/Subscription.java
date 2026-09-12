@@ -16,15 +16,23 @@ public final class Subscription {
         this.orchestrator = orchestrator;
     }
 
-    /** Stop receiving messages. Idempotent. */
+    /**
+     * Stop receiving messages. Idempotent.
+     */
     public void unsubscribe() {
         orchestrator.removeSubscription(this);
     }
 
+    /**
+     * @return the topic this subscription is bound to
+     */
     Topic<?> topic() {
         return topic;
     }
 
+    /**
+     * @return the handler registered with this subscription
+     */
     MessageHandler handler() {
         return handler;
     }

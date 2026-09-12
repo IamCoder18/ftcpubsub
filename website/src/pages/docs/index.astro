@@ -15,12 +15,14 @@ for (const e of all) {
   groups[top] ??= [];
   groups[top].push({ id: e.id, title: e.data.title ?? e.id, description: e.data.description });
 }
+const groupOrder = ['get-started', 'concepts', 'annotations', 'ftc', 'recipes', 'guides', 'api'];
 const groupTitles: Record<string, string> = {
   'get-started': 'Get Started',
   concepts: 'Concepts',
   annotations: 'Annotations',
   ftc: 'FTC Integration',
   recipes: 'Recipes',
+  guides: 'Guides',
   api: 'API Reference',
 };
 ---
@@ -33,14 +35,17 @@ const groupTitles: Record<string, string> = {
 
       <h2>60-second tour</h2>
       <ol>
-        <li>Add the dependency (see <a href="/install">Install</a>).</li>
+        <li>Add the dependency (see <a href="/docs/get-started/install">Install</a>).</li>
         <li>Extend <code>SafeOpMode</code> instead of <code>OpMode</code>.</li>
         <li>Build <code>Node</code>s — one concern each (drive, intake, shooter).</li>
         <li>Use <code>@SubscribedTo</code>, <code>@RunPeriodically</code>, <code>@RunnableAction</code> to wire them up.</li>
-        <li>Anything that touches a <code>DcMotorEx</code> / <code>Servo</code> / <code>IMU</code> runs on the hardware thread.</li>
+        <li>Anything that touches a <code>DcMotorEx</code> / <code>Servo</code> / <code>IMU</code> runs on the hardware thread — read <a href="/docs/concepts/architecture">Architecture</a> to see how.</li>
       </ol>
 
-      {Object.entries(groups).map(([g, items]) => (
+      {groupOrder.map((g) => {
+        const items = groups[g];
+        if (!items) return null;
+        return (
         <section class="docs-section">
           <h2>{groupTitles[g] ?? g}</h2>
           <ul role="list" class="docs-section__list">
@@ -58,7 +63,8 @@ const groupTitles: Record<string, string> = {
             })}
           </ul>
         </section>
-      ))}
+        );
+      })}
 
       <h2>For LLMs and agents</h2>
       <p>Every page is also served as Markdown. See <a href="/llms.txt">llms.txt</a>, <a href="/llms-full.txt">llms-full.txt</a>, and <a href="/docs.md">docs.md</a> at the site root, or append <code>.md</code> to any docs URL.</p>

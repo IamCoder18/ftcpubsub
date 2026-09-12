@@ -1,39 +1,63 @@
 # Synapse safety invariants
 
-The four properties Synapse provides around FTC hardware access. Each cites the source and the test that exercises it. Important: every claim here is scoped to **Synapse-routed** operations. Code that touches hardware directly without going through the orchestrator is outside these invariants.
+The guarantees Synapse provides around FTC hardware access. Every claim is scoped to **Synapse-routed** operations — raw hardware calls from code that bypasses the orchestrator are outside all of these invariants.
 
-## 1. Single-threaded execution of Synapse-routed hardware work
+## 1. Single-threaded hardware execution
 
-**Claim.** Every piece of code that touches FTC hardware *and is routed through Synapse* (via `@OnHardwareThread`, `@RunPeriodically(hardware = true)`, `HardwareActions.run`, `HardwareActions.call`, `HardwareActions.callAsync`, `HardwareActions.bulkRead`, or `SafeDevice.run`) runs on the same single OS thread and executes strictly serially.
+**Claim.** Every piece of hardware-touching code routed through Synapse — `@OnHardwareThread` subscribers, `@RunPeriodically(hardware = true)` loops, `HardwareActions.run/call/callAsync/bulkRead`, and `SafeDevice.run/call/callAsync` — executes on the same single OS thread, strictly serially.
 
-**Where it's enforced.** `src/main/java/com/aaravlabs/synapse/OrchestratorImpl.java:93-94` — `Executors.newSingleThreadScheduledExecutor(hwTf)`.
+**Where.** `OrchestratorImpl` creates the hardware worker via `Executors.newSingleThreadScheduledExecutor(hwTf)`; the thread is captured at construction and compared by identity in `isHardwareThread()`.
 
-**Out of scope.** Ad-hoc hardware calls from code that is *not* routed through Synapse (e.g. raw `motor.setPower(...)` from `SafeOpMode.loop()` or from a non-annotated callback) bypass this thread entirely. Such code is outside these invariants; the `HardwareActions.assertNotHardwareThread()` check in `SafeOpMode.loop()` only proves that the *OpMode loop itself* is not running on the hardware thread. It does not detect or intercept raw ad-hoc writes.
+**The mirror rule (deadlock).** `HardwareActions.call(...)` and `SafeDevice.call(...)` submit to the hardware thread and then **block the caller** on the future. From code already on the hardware thread — a `hardware = true` loop, an `@OnHardwareThread` subscriber, a bulk-read reader — the single thread waits on a task it can never start: **guaranteed permanent hang**, no exception, no log line. Inside hardware-thread code, use `SafeDevice.raw()` (direct access, same thread) or `callAsync(...)` (non-blocking).
 
-**Test.** `src/test/java/com/aaravlabs/synapse/HardwareThreadTest.java` — six `@Test` methods covering serial execution, ordering under load, and the `assertNotHardwareThread()` path.
+**Test.** `src/test/java/com/aaravlabs/synapse/HardwareThreadTest.java` — serial execution, ordering under load, `assertNotHardwareThread()` behavior.
 
-## 2. Two-pool isolation under normal load
+## 2. Two-pool isolation
 
-**Claim.** `@RunPeriodically` loops run on the scheduler pool; `@SubscribedTo` callbacks run on the callback pool. Under normal load a slow subscriber cannot starve a periodic loop and vice-versa.
+**Claim.** `@RunPeriodically` loops run on the scheduler pool; `@SubscribedTo` callbacks run on the callback pool. A slow subscriber cannot starve a periodic loop and vice-versa.
 
-**Where it's enforced.** `OrchestratorImpl.java:76` (scheduler, size 8) and `OrchestratorImpl.java:78-82` (callbacks, 4–16 threads, bounded queue of 256 with `CallerRunsPolicy`).
+**Where.** `OrchestratorImpl` constructor: scheduler = `Executors.newScheduledThreadPool(8)`; callbacks = `ThreadPoolExecutor(4, 16, 60s, LinkedBlockingQueue(256), CallerRunsPolicy)`.
 
-**Caveat.** The callback pool's `CallerRunsPolicy` runs the submitted task on the publisher's thread if the queue is full. A scheduler task that calls `publish` can therefore end up running a slow callback on its own thread, briefly reducing isolation under saturation. Treat the two-pool isolation as a steady-state property, not a hard guarantee under backpressure.
+**Caveat (backpressure).** With the queue at 256 and all 16 threads busy, `CallerRunsPolicy` runs the overflow callback on the **publisher's** thread. A `hardware = true` loop publishing into a saturated bus can therefore execute a slow non-hardware subscriber on the hardware thread, temporarily eroding isolation. This is a deliberate trade: backpressure instead of dropped messages. Keep subscribers cheap; keep heavy work in `hardware = true` loops.
 
-**Test.** `src/test/java/com/aaravlabs/synapse/ThreadingTest.java:16` and `:50`.
+**Test.** `src/test/java/com/aaravlabs/synapse/ThreadingTest.java`.
 
 ## 3. Copy-on-write subscriber snapshots
 
-**Claim.** Subscribers are stored in a copy-on-write list under a lock, so publishers iterate a stable snapshot and subscribers can join/leave mid-dispatch without throwing `ConcurrentModificationException`.
+**Claim.** Publishers iterate a stable snapshot of each topic's subscriber list; subscribers can join/leave mid-dispatch without `ConcurrentModificationException`.
 
-**Where it's enforced.** `OrchestratorImpl.java:538-576` (`SubscriberList`).
+**Where.** `OrchestratorImpl.SubscriberList` — copy-on-write array under a lock; `publish()` iterates `snapshot()` without holding the lock.
 
-**Test.** `src/test/java/com/aaravlabs/synapse/SoakTest.java:32`, `:85`, `:121` — long-running soak tests with concurrent publishers and subscribers.
+**Test.** `src/test/java/com/aaravlabs/synapse/SoakTest.java` — concurrent publishers/subscribers churn.
 
-## 4. Fail-fast thread assertion in `SafeOpMode`
+## 4. Fail-fast thread assertion in SafeOpMode
 
-**Claim.** If `SafeOpMode.loop()` ever runs on the hardware thread, Synapse throws `IllegalStateException` immediately rather than silently corrupting the bus.
+**Claim.** If `SafeOpMode.loop()` ever executes on the hardware thread, it throws `IllegalStateException` immediately instead of silently corrupting the bus.
 
-**Where it's enforced.** `src/main/java/com/aaravlabs/synapse/ftc/SafeOpMode.java:71-76` (`hardware.assertNotHardwareThread()` at the top of `loop()`).
+**Where.** `SafeOpMode.loop()` calls `hardware.assertNotHardwareThread()` (which throws if `isHardwareThread()`) before `onSafeLoop()`.
 
-**Test.** `src/test/java/com/aaravlabs/synapse/ftc/HardwareActionsTest.java` — exercises the `isHardwareThread` and `assertNotHardwareThread` paths.
+**Test.** `src/test/java/com/aaravlabs/synapse/ftc/HardwareActionsTest.java` — the `isHardwareThread` / `assertNotHardwareThread` paths.
+
+## 5. Error isolation
+
+**Claim.** Exceptions thrown inside subscribers, periodic loops, or actions are logged through the orchestrator's `LogSink` and never crash the OpMode or kill the schedule.
+
+**Where.** Every dispatch wrapper (`dispatchCallback`, `schedulePeriodic`, `scheduleHardwarePeriodic`, `scheduleHardwareBulkRead`, the action runner) catches `Throwable`, logs, and returns. Note: the annotation binder's wrapper rethrows after logging, but the orchestrator's outer catch still prevents schedule death.
+
+## Thread inventory
+
+| Thread | Name pattern | Role |
+| --- | --- | --- |
+| OpMode loop | FTC SDK thread | lifecycle hooks, telemetry |
+| Scheduler pool | `synapse-<name>-1..8` | non-hardware periodic loops |
+| Callback pool | `synapse-<name>-N` (grows 4→16) | non-hardware subscribers |
+| Action pool | `synapse-<name>-N` (per invocation) | actions |
+| Hardware thread | `synapse-<name>-hw-1` (exactly one) | all hardware work |
+
+All are daemon threads, so they never block JVM exit; the orchestrator still shuts them down explicitly in `close()` (awaiting up to 100 ms each). When diagnosing a hang, dump the stack of `synapse-*-hw-1` first — a `call()` from the hardware thread shows up as that thread parked on a `CompletableFuture.get()`.
+
+## What is out of scope
+
+- **Raw device calls** from `onSafeLoop()`, plain callbacks, or actions bypass every invariant above. `assertNotHardwareThread()` only proves the *OpMode loop itself* is not on the hardware thread — it cannot detect or intercept ad-hoc writes. Migration greps exist for this reason (`references/migration.md` Step 1).
+- **`hardware.shutdown()`** closes the entire orchestrator (all pools, all nodes), despite its name. Do not call it mid-OpMode.
+- **`tick()`** is a reserved no-op hook called from `SafeOpMode.loop()`.

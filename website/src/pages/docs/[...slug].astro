@@ -34,12 +34,14 @@ for (const s of all) {
   groups[top] ??= [];
   groups[top].push(s);
 }
+const groupOrder = ['get-started', 'concepts', 'annotations', 'ftc', 'recipes', 'guides', 'api'];
 const groupTitles: Record<string, string> = {
   'get-started': 'Get Started',
   concepts: 'Concepts',
   annotations: 'Annotations',
   ftc: 'FTC Integration',
   recipes: 'Recipes',
+  guides: 'Guides',
   api: 'API Reference',
 };
 ---
@@ -62,7 +64,10 @@ const groupTitles: Record<string, string> = {
   <main class="docs-shell">
     <aside class="docs-side" aria-label="Docs navigation">
       <a class="docs-side__back" href="/docs">← All docs</a>
-      {Object.entries(groups).map(([g, items]) => (
+      {groupOrder.map((g) => {
+        const items = groups[g];
+        if (!items) return null;
+        return (
         <section class="docs-side__group">
           <h3>{groupTitles[g] ?? g}</h3>
           <ul role="list">
@@ -85,7 +90,8 @@ const groupTitles: Record<string, string> = {
             })}
           </ul>
         </section>
-      ))}
+        );
+      })}
     </aside>
     <article class="docs-article">
       <Content />

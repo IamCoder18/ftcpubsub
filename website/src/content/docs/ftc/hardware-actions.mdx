@@ -1,43 +1,70 @@
 ---
 title: HardwareActions
-description: The four hardware-thread methods.
+description: The facade over the hardware thread — run, call, callAsync, bulkRead.
 ---
 
 # HardwareActions
 
-Obtain via `orchestrator.hardware()`. Four methods, four use cases.
+`HardwareActions` is the facade over the orchestrator's single hardware thread. Get it from `SafeOpMode` (the `hardware` field) or from any orchestrator: `orchestrator.hardware()`.
 
-## run
+Four methods, four use cases:
+
+| Method | Blocks caller? | Returns | Use for |
+| --- | --- | --- | --- |
+| `run(action)` | no | `void` | fire-and-forget hardware writes |
+| `call(action)` | **yes** | the value | reads you need *now* |
+| `callAsync(action)` | no | `CompletableFuture<T>` | reads you'll consume later |
+| `bulkRead(hz, reader)` | no | `BulkReadHandle` | periodic sensor sampling |
+
+## run — async write
 
 ```java
 hardware.run(() -> motor.setPower(0.5));
 ```
 
-Async. Schedules the runnable on the hardware thread and returns immediately.
+Submits and returns immediately. The action executes on the hardware thread in submission order relative to all other hardware work.
 
-## call
+## call — synchronous read
 
 ```java
-double pos = hardware.call(() -> motor.getCurrentPosition());
+int pos = hardware.call(() -> motor.getCurrentPosition());
 ```
 
-Synchronous. Blocks the caller until the hardware thread finishes. Unwraps the original exception (`HardwareActions.java:81-90`).
+Blocks the caller until the hardware thread finishes and returns the value. Exceptions thrown by the callable are unwrapped and rethrown on the caller's thread. An overload accepts `(timeout, unit)` and throws `TimeoutException` if the hardware thread doesn't answer in time.
 
-## callAsync
+> **Deadlock: never `call(...)` from hardware-thread code.** Inside a `hardware = true` loop, an `@OnHardwareThread` subscriber, or a bulk-read reader, `call(...)` blocks the single hardware thread on a task it can never start — the robot hangs. There, use `device.raw()` and touch the device directly. `call(...)` is safe from `onSafeLoop`, `onSafeInit`, plain subscribers, and actions.
+
+## callAsync — future read
 
 ```java
-CompletableFuture<Integer> pos = hardware.callAsync(() -> motor.getCurrentPosition());
+CompletableFuture<Double> amps = hardware.callAsync(() -> motor.getCurrent(CurrentUnit.AMPS));
+amps.thenAccept(a -> orchestrator.publish("motor/amps", a));
 ```
 
-Returns a `CompletableFuture`. Non-blocking.
+Same routing as `call`, but non-blocking and safe to call from the hardware thread itself.
 
-## bulkRead
+## bulkRead — periodic sensor sampling
 
 ```java
-BulkReadHandle h = hardware.bulkRead(50, view -> {
+hardware.bulkRead(50, view -> {
+    // runs on the hardware thread at 50 Hz
     double amps = motor.getCurrent(CurrentUnit.AMPS);
     view.publish("motor/amps", amps);
 });
 ```
 
-Periodic. Runs the `BulkReader` at `hz` on the hardware thread. Returns a handle to cancel later.
+Schedules the `BulkReader` on the hardware thread at the given rate. The reader receives a `HardwareView` with `publish(topic, value)` and `getLatestValue(topic, type)`. Returns a `BulkReadHandle`; call `hardware.stopBulkRead(handle)` to cancel.
+
+## Diagnostics
+
+| Method | Purpose |
+| --- | --- |
+| `isHardwareThread()` | true if the current thread is the hardware thread |
+| `assertNotHardwareThread()` | throws `IllegalStateException` if it is — called for you in `SafeOpMode.loop()` |
+| `tick()` | reserved hook, currently a no-op; `SafeOpMode.loop()` calls it |
+| `shutdown()` | closes the **entire orchestrator**, not just hardware access — you rarely need this, since `SafeOpMode.stop()` closes everything |
+
+## Next steps
+
+- [SafeDevice](/docs/ftc/safe-device) — per-device wrappers over this facade.
+- [`@OnHardwareThread`](/docs/annotations/on-hardware-thread) — the annotation path to the same thread.

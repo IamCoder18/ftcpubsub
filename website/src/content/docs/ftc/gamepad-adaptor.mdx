@@ -1,28 +1,74 @@
 ---
 title: GamepadAdaptor
-description: Reflects Gamepad fields onto topics.
+description: Publishes every gamepad button and axis onto topics at 60 Hz.
 ---
 
 # GamepadAdaptor
+
+`GamepadAdaptor` reflects an SDK `Gamepad` onto the bus. One line gives every button and axis a topic:
 
 ```java
 GamepadAdaptor.attach(orchestrator, gamepad1, "g1");
 ```
 
-One line. Every `boolean` field on `gamepad1` becomes a topic:
+After this, gamepad 1's state flows onto the bus at **60 Hz** — no polling code, no edge-detection code, nothing else.
 
-| Topic                        | Type    | Meaning                              |
-| ---------------------------- | ------- | ------------------------------------ |
-| `g1/<button>`                | Boolean | current state                        |
-| `g1/<button>/rising`         | Boolean | fires (value=true) on 0→1 transition |
-| `g1/<button>/falling`        | Boolean | fires on 1→0 transition              |
+## Topics published
 
-Every `float` field becomes a single topic:
+Every **public non-static `boolean` field** becomes a button with three topics:
 
-| Topic         | Type   | Meaning       |
-| ------------- | ------ | ------------- |
-| `g1/<axis>`   | Float  | current value |
+| Topic | Type | Meaning |
+| --- | --- | --- |
+| `g1/<button>` | `Boolean` | current state, published every poll |
+| `g1/<button>/rising` | `Boolean` | fires (value `true`) on press (0→1) |
+| `g1/<button>/falling` | `Boolean` | fires (value `true`) on release (1→0) |
 
-Polling is at 60 Hz (`GamepadAdaptor.java:43`, `HZ = 60`).
+Every **public non-static `float` field** becomes an axis topic:
 
-See `GamepadAdaptor.java:101-127` for the polling implementation. The adaptor uses reflection so it works against the real FTC SDK `Gamepad` class with no compile-time dependency.
+| Topic | Type | Meaning |
+| --- | --- | --- |
+| `g1/<axis>` | `Float` | current value, published every poll |
+
+The real SDK `Gamepad` (v11.2) yields **27 button fields** — including `a`, `b`, `x`, `y`, `circle`, `cross`, `square`, `triangle`, the four `dpad_*` keys, `left_bumper`, `right_bumper`, `start`, `back`, `guide`, `options`, `share`, `ps`, the stick buttons, `touchpad`, `touchpad_finger_1/2`, and `left_trigger_pressed` / `right_trigger_pressed` — and **10 axis fields**: `left_stick_x`, `left_stick_y`, `right_stick_x`, `right_stick_y`, `left_trigger`, `right_trigger`, and the four touchpad coordinates. Non-boolean/float fields (`id`, `timestamp`, `nextRumbleApproxFinishTime`) are skipped, and any field a future SDK adds is picked up automatically by the reflection.
+
+## Reading the values
+
+**Edges — subscribe** (fires once per press):
+
+```java
+@SubscribedTo(topic = "g1/right_bumper/rising")
+@OnHardwareThread
+public void grab(Boolean v) {
+    claw.run(s -> s.setPosition(GRAB));
+}
+```
+
+**Axes — poll** (inside a loop):
+
+```java
+double y = -orchestrator.getLatestValue("g1/left_stick_y", Float.class)
+                         .map(Float::doubleValue).orElse(0.0);
+```
+
+> **Axes are `Float`.** The SDK stores them as `float`, so `getLatestValue(name, Double.class)` returns an empty `Optional` — always fetch with `Float.class` and map to `double` for math.
+
+## Details worth knowing
+
+- `attach` registers a node named `GamepadAdaptor:g1` and returns that name; it is cleaned up automatically when the orchestrator closes.
+- All topics are pre-created at attach time, so subscriptions made right after `attach` (in the same `onSafeInit`) never miss values.
+- The adaptor polls on the **scheduler pool** — gamepad reads never need the hardware thread.
+- The base `<button>` topic publishes current state every tick, so it also works as a "held" input; `/rising` and `/falling` publish only on the transition.
+
+## Two gamepads
+
+```java
+GamepadAdaptor.attach(orchestrator, gamepad1, "g1");
+GamepadAdaptor.attach(orchestrator, gamepad2, "g2");
+```
+
+Each adaptor is independent; the parent prefix keeps their topics apart. See the [two-controller recipe](/docs/recipes/two-controller-teleop) for the robot-validated driver/operator split.
+
+## Next steps
+
+- [Mecanum drive](/docs/recipes/mecanum-drive) — gamepad topics driving a real drivetrain.
+- [Subscriptions](/docs/concepts/subscriptions) — events vs. polling.

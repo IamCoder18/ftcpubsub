@@ -5,29 +5,59 @@ description: Named, typed channels for inter-module communication.
 
 # Topics
 
-A topic is a string name paired with a Java type. You create topics, publish to them, and either subscribe for every value or fetch the latest.
+A topic is a **string name paired with a Java type**. Publishers push values onto it; subscribers receive every value; anything can read the latest value on demand. Topics are the only way modules communicate — no direct references, no shared mutable state.
 
 ```java
 Topic<Double> power = orchestrator.getOrCreateTopic("intake/set/power", Double.class);
 orchestrator.publish("intake/set/power", 0.75);
 ```
 
-## Type checking
+## Naming
 
-The orchestrator normalizes primitive ↔ wrapper types (`double` ↔ `Double`, `int` ↔ `Integer`, etc.) so an annotation-bound `double` parameter works seamlessly with a programmatically-typed `Double.class` topic. See `OrchestratorImpl.java:165-177` (`boxed()`).
+Slash-separated paths, rooted by the producing subsystem:
 
-If you publish a value of the wrong type, the orchestrator throws `IllegalArgumentException` with the names of both types (`OrchestratorImpl.java:212-215`).
+```
+g1/left_stick_y          gamepad axis (published by GamepadAdaptor)
+g1/a/rising              button press edge
+drive/power/fl           per-wheel power (published by the drive node)
+intake/power             current intake power
+```
+
+The root of the path says who publishes it: `g1/...` is gamepad 1, `drive/...` is the drive subsystem. Consumers never publish to another subsystem's topics — they publish to their own state topics and subscribe to what they need.
+
+## Typing
+
+A topic's type is fixed at creation and checked on every publish.
+
+- **Primitives and wrappers are interchangeable.** `double.class` and `Double.class` name the same topic type, so an annotation method declared `double power` binds cleanly to a `Double`-typed topic.
+- **Compatibility uses assignability**, so a `Number` topic accepts `Integer` and `Double` publishes, and an `Object` topic accepts anything.
+- **Publishing an incompatible value throws `IllegalArgumentException`** with both type names — e.g. publishing a `Double` to a topic created as `Integer`.
+- **Reading with the wrong type is safe**: `getLatestValue` returns an empty `Optional` rather than throwing.
+
+> **Decide topic types up front.** Because the first publish *creates* the topic from the value's runtime type, an accidental `publish("battery/volts", 12)` (an `int`) would lock the topic to `Integer` and make every later `Double` publish throw. Declare the type with `getOrCreateTopic` at the top of the owning node, then publish untyped values freely.
 
 ## Auto-creation
 
-You can skip `getOrCreateTopic` and just publish — the orchestrator will create the topic from the runtime type of the first value (`OrchestratorImpl.java:207-211`). This matches Heron's behavior.
+You never *have* to pre-create a topic — the first publish creates it from the value's runtime type, and the first `subscribe` creates it from the declared handler type. Pre-creating with `getOrCreateTopic` is still recommended for anything shared between modules, because it pins the type at one obvious place.
 
-## Latest value cache
+`GamepadAdaptor` pre-creates all of its topics when attached, so you can subscribe to `g1/a/rising` before the first gamepad poll ever runs.
+
+## Reading the latest value
 
 Every topic remembers its most recent value:
 
 ```java
-Optional<Double> latest = orchestrator.getLatestValue("intake/set/power", Double.class);
+Optional<Double> latest = orchestrator.getLatestValue("drive/power/fl", Double.class);
+double fl = latest.orElse(0.0);
+
+Topic<Double> flTopic = orchestrator.findTopic("drive/power/fl", Double.class).orElseThrow();
+double fl2 = flTopic.latestValueOr(0.0);
+long nanosSinceUpdate = System.nanoTime() - flTopic.latestPublishNanos();
 ```
 
-Useful when you just need "what was the last gamepad axis?" rather than reacting to every change. See `Topic.java:38-64`.
+Fetching the latest value is the right tool inside periodic loops; subscribing is the right tool when the *event* matters, not the current state. See [Subscriptions](/docs/concepts/subscriptions) for the tradeoff.
+
+## Next steps
+
+- [Subscriptions](/docs/concepts/subscriptions) — reacting to values instead of polling them.
+- [GamepadAdaptor](/docs/ftc/gamepad-adaptor) — the biggest topic source on most robots.

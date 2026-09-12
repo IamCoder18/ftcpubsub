@@ -1,25 +1,65 @@
 ---
 title: SafeDevice
-description: A type-safe wrapper around any hardware object.
+description: A typed wrapper that routes one device's calls through the hardware thread.
 ---
 
 # SafeDevice
 
+`SafeDevice<T>` wraps a single hardware object and routes every operation through the hardware thread. Combined with `SafeHardwareMap` (below), it is the friendliest way to touch hardware.
+
 ```java
 SafeDevice<DcMotorEx> intake = safeMap.device(DcMotorEx.class, "intake");
-intake.run(m -> m.setPower(0.5));
-int pos = intake.call(DcMotorEx::getCurrentPosition);
+
+intake.run(m -> m.setPower(0.5));                      // async write
+int pos = intake.call(DcMotorEx::getCurrentPosition);  // sync read (blocks caller)
+CompletableFuture<Integer> p = intake.callAsync(DcMotorEx::getCurrentPosition);
 ```
 
-Every method on `SafeDevice` submits the call to the hardware thread (`SafeDevice.java:45-55`).
+## The API
 
-## When to use SafeDevice
+| Method | Blocks? | Signature | Typical use |
+| --- | --- | --- | --- |
+| `run(action)` | no | `Consumer<T>` | writes — `setPower`, `setPosition`, `setMode` |
+| `call(action)` | yes | `Function<T, R>` | reads you need immediately |
+| `callAsync(action)` | no | `Function<T, R>` | reads consumed later |
+| `raw()` | — | returns `T` | inside hardware-thread code only |
 
-- You have a single device you want to wrap.
-- You want `run(...)` and `call(...)` to feel like normal method calls.
-- You're using a method reference (`DcMotorEx::getCurrentPosition`).
+`run` and `callAsync` return immediately. `call` blocks the caller until the hardware thread answers and rethrows the device's exceptions.
 
-## When to use HardwareActions instead
+## raw() — inside hardware-thread code
 
-- You have a block of code (multiple statements) that all need to run on the hardware thread.
-- You're not tied to one device.
+```java
+@RunPeriodically(hz = 50, hardware = true)
+public void drive() {
+    // Already on the hardware thread: use raw() for immediate access.
+    left.raw().setPower(powerFL);
+    right.raw().setPower(powerFR);
+}
+```
+
+`raw()` returns the unwrapped device. **Only use it from code already running on the hardware thread** — `hardware = true` loops, `@OnHardwareThread` subscribers, bulk-read readers, or `hardware.run(...)` bodies. From anywhere else, a raw call is exactly the thread-safety violation Synapse exists to prevent.
+
+> **Never `call(...)` from the hardware thread.** `intake.call(...)` inside a `hardware = true` loop blocks the single hardware thread on itself — the robot hangs. Inside hardware-thread code, use `raw()` (or submit work with `run(...)`, which just queues onto the thread you're already on).
+
+## SafeHardwareMap — where devices come from
+
+`SafeOpMode` creates a `SafeHardwareMap` as `safeMap`, wrapping the SDK `hardwareMap`:
+
+```java
+SafeDevice<DcMotorEx> frontLeft  = safeMap.device(DcMotorEx.class, "frontLeft");
+SafeDevice<Servo>     claw       = safeMap.device(Servo.class, "claw");
+SafeDevice<IMU>       imu        = safeMap.device(IMU.class, "imu");
+```
+
+Each `device(class, name)` performs the same lookup the SDK would, but returns the wrapper, so a device can never be used off-thread by accident. Pass the `SafeDevice`s into your nodes' constructors — nodes should never see a raw `hardwareMap`.
+
+## Choosing SafeDevice vs HardwareActions
+
+- **One device, one operation** → `SafeDevice` (`intake.run(m -> ...)`) — reads like a normal method call.
+- **A block of code over several devices** → `hardware.run(() -> { ... })` with `raw()` inside.
+- **Unwrap an already-fetched device** → `device.raw()` inside hardware-thread code.
+
+## Next steps
+
+- [HardwareActions](/docs/ftc/hardware-actions) — the facade these wrappers submit to.
+- [Mecanum drive](/docs/recipes/mecanum-drive) — SafeDevice usage on a real drivetrain.

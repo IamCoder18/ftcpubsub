@@ -1,40 +1,65 @@
 ---
 title: Subscriptions
-description: Three ways to consume topic values.
+description: Three ways to consume topic values — and when each fits.
 ---
 
 # Subscriptions
 
-There are three equivalent ways to receive values on a topic:
+There are three ways to consume a topic. They are not interchangeable — each answers a different question.
 
-## 1. Programmatic
+| Style | Question it answers | Runs on | Return |
+| --- | --- | --- | --- |
+| `@SubscribedTo` | *do something* every time a value arrives | callback pool (or hardware thread with `@OnHardwareThread`) | — |
+| `subscribe(name, type, handler)` | same, but registered at runtime | callback pool | `Subscription` (cancellable) |
+| `getLatestValue(name, type)` | what is the value *right now*? | your own thread | `Optional<T>` |
 
-```java
-Subscription sub = orchestrator.subscribe("intake/set/power", Double.class, p -> {
-    intake.run(m -> m.setPower(p));
-});
-// later:
-sub.unsubscribe();
-```
-
-The handler runs on the callback pool. The call returns a `Subscription` handle you can cancel.
-
-## 2. Annotation
+## 1. `@SubscribedTo` — annotation
 
 ```java
 @SubscribedTo(topic = "intake/set/power")
 @OnHardwareThread
-public void onPower(double power) {
+public void onTarget(double power) {
     intake.run(m -> m.setPower(power));
 }
 ```
 
-The annotation binder subscribes for you when you `registerNode`. The handler still runs on the callback pool unless you add `@OnHardwareThread`.
+Declared on a `Node` method and bound at `registerNode`. The method takes 0 or 1 parameters; with one, the type must match the topic's (primitives and wrappers are normalized). A value that doesn't match the parameter type is **silently dropped**, not an error.
 
-## 3. Latest-value fetch
+See [`@SubscribedTo`](/docs/annotations/subscribed-to) for the full rules.
+
+## 2. `subscribe(...)` — programmatic
 
 ```java
-double now = orchestrator.getLatestValue("intake/set/power", Double.class).orElse(0.0);
+Subscription sub = orchestrator.subscribe("g1/x", Boolean.class,
+        v -> frontLeft.run(m -> m.setPower(v ? 1.0 : 0.0)));
+
+// later:
+sub.unsubscribe();
 ```
 
-No subscription. Useful inside a `@RunPeriodically` loop where you only care about the current value.
+Same delivery semantics as the annotation, but usable outside nodes — in `onSafeInit`, tests, or glue code. The handler still runs on the callback pool; route hardware work through `run(...)`/`call(...)`, exactly as the annotation form does. `unsubscribe()` is idempotent.
+
+This is also the pattern for quick verification OpModes: subscribe buttons directly to device writes and see the robot react, no node needed.
+
+## 3. `getLatestValue(...)` — poll
+
+```java
+double y = -orchestrator.getLatestValue("g1/left_stick_y", Float.class)
+                         .map(Float::doubleValue).orElse(0.0);
+```
+
+No subscription at all — read the current state whenever you want. This is what a `@RunPeriodically` loop uses for its inputs. Returns an empty `Optional` if nothing has been published yet or the type doesn't match, so `orElse(...)` a sensible default.
+
+## Choosing between them
+
+- **Reactive behavior** ("when the button is pressed...") → subscribe. Edges (`/rising`, `/falling`) are events; events need subscriptions.
+- **Continuous control** ("every tick, set power from the stick") → poll with `getLatestValue` inside a `@RunPeriodically(hardware = true)` loop.
+- **One-shot wiring in an OpMode or test** → `subscribe(...)`.
+- **Telemetry** → poll in `onSafeLoop()`.
+
+> **Subscriptions are hot.** A `@SubscribedTo` on a topic published at 60 Hz fires 60 times a second. Keep handlers cheap (set a field, submit a `run(...)`); anything heavier belongs in a periodic loop.
+
+## Next steps
+
+- [`@SubscribedTo`](/docs/annotations/subscribed-to) — full annotation reference.
+- [`@RunPeriodically`](/docs/annotations/run-periodically) — the polling side.

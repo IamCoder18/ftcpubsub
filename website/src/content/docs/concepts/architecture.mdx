@@ -1,0 +1,77 @@
+---
+title: Architecture
+description: The four thread workers, what runs where, and the hardware-thread rule.
+---
+
+# Architecture
+
+Synapse runs your robot code on **five kinds of threads**: the FTC SDK's OpMode thread plus four workers owned by the orchestrator. Everything — scheduling, message delivery, hardware access — is organized around which of these threads a piece of code runs on.
+
+## The four workers
+
+When `SafeOpMode.init()` creates the orchestrator, it spins up four workers:
+
+| Worker | Threads | Queue | Used for |
+| --- | --- | --- | --- |
+| **Scheduler** | 8 | unbounded | `@RunPeriodically` loops (non-hardware) and `runPeriodically(...)` tasks |
+| **Callback pool** | 4–16 | bounded, 256 | `@SubscribedTo` handlers |
+| **Action pool** | grows on demand | unbounded | `@RunnableAction` invocations |
+| **Hardware thread** | **1 (dedicated)** | — | every piece of hardware-touching work |
+
+All threads are daemon threads named `synapse-<name>-<n>` (e.g. `synapse-ftc-3`), with the hardware thread at `synapse-ftc-hw-1`. When something hangs or a log line appears without a source, filter Logcat by thread name to find the culprit.
+
+## The one rule
+
+> **All hardware access happens on the hardware thread. Nothing else.**
+
+FTC hardware is not thread-safe. Calling `setPower`, `setPosition`, or reading a sensor from two threads at once produces race conditions, garbled Lynx/serial responses, or `ConcurrentModificationException`s deep inside the SDK. Synapse funnels every hardware operation — from a gamepad callback, a periodic loop, or a bulk read — onto one OS thread, so those races cannot happen by construction.
+
+Three layers route code onto that thread. Pick whichever matches the call site:
+
+| Layer | Use when | Example |
+| --- | --- | --- |
+| `@OnHardwareThread` on a `@SubscribedTo` method | the work is a reaction to a message | a subscriber that sets motor power |
+| `@RunPeriodically(hz = N, hardware = true)` | the work repeats at a fixed rate | a 50 Hz drive loop |
+| `HardwareActions` / `SafeDevice` (`run`, `call`, `callAsync`) | you are outside those methods — in `onSafeInit`, a plain subscriber, or an action | `intake.run(m -> m.setPower(0.5))` |
+
+The reverse rule matters just as much:
+
+> **Code already running on the hardware thread must not block waiting for the hardware thread.** Calling `hardware.call(...)` or `device.call(...)` from inside a `hardware = true` loop, an `@OnHardwareThread` subscriber, or a bulk-read reader **deadlocks the robot** — the single thread is waiting on a task it can never start. Use `device.raw()` there instead.
+
+`SafeOpMode.loop()` defends the other direction with `hardware.assertNotHardwareThread()`: if your `onSafeLoop()` (or anything it calls) ends up executing on the hardware thread, the OpMode fails immediately with `IllegalStateException` instead of corrupting the bus.
+
+## What runs where — a publishing walkthrough
+
+When any code calls `orchestrator.publish("intake/set/power", 0.75)`:
+
+1. **On the caller's thread**, the topic is looked up (or lazily created from the value's runtime type), the type is checked, and the latest-value cache is updated. This is all cheap, non-blocking work — publishing never stalls the hardware thread.
+2. **On the callback pool**, each subscriber's handler runs. If the 256-slot queue is full, the handler runs on the publisher's thread instead (backpressure: a slow subscriber slows its publisher rather than dropping work).
+3. **If the subscriber is `@OnHardwareThread`**, the handler is re-routed to the hardware thread and executes serially with every other hardware task.
+
+A `@RunPeriodically(hardware = true)` loop works the same way in reverse: the scheduler fires it on the hardware thread every `1000 / hz` ms, the loop reads gamepad topics from the latest-value cache, computes powers, and submits hardware writes directly on the thread it is already on.
+
+## Lifecycle
+
+The OpMode thread drives the lifecycle; the workers are created and destroyed inside it:
+
+| OpMode method | What Synapse does |
+| --- | --- |
+| `init()` | creates the orchestrator, `hardware`, and `safeMap`; calls `onSafeInit()` (where you register nodes) |
+| `init_loop()` | calls `onSafeInitLoop()` |
+| `start()` | calls `onSafeStart()` |
+| `loop()` | asserts off-hardware-thread, ticks, calls `onSafeLoop()` |
+| `stop()` | calls `onSafeStop()`, then closes the orchestrator — cancels all loops and actions, unregisters every node (calling each node's `close()`), and shuts every worker down |
+
+## Isolation guarantees
+
+- A slow subscriber cannot starve a periodic loop: they run on different pools.
+- A slow `@RunPeriodically` loop cannot overlap itself: scheduling is fixed-delay (next run starts after the previous finishes), so the effective rate is `hz` or lower.
+- Hardware-thread work is strictly serial: two pieces of hardware code can never interleave, no locks needed in your code.
+- Exceptions in subscribers, loops, and actions are logged, never crash the OpMode.
+
+> **Backpressure caveat.** Because the callback pool uses `CallerRunsPolicy`, a publisher that fills the queue runs the overflow callbacks itself. A `hardware = true` loop publishing into a saturated queue can therefore execute a slow non-hardware subscriber on the hardware thread. In practice this only happens if a subscriber blocks for many milliseconds — keep subscribers light and push hardware work to the hardware thread, and this never bites.
+
+## Next steps
+
+- [Orchestrator](/docs/concepts/orchestrator) — the API you use to drive all of this.
+- [SafeOpMode](/docs/ftc/safe-opmode) — the lifecycle hooks in detail.

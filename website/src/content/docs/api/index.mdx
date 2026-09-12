@@ -1,41 +1,161 @@
 ---
 title: API Reference
-description: Public surface of Synapse v0.3.1.
+description: The complete public surface of Synapse v0.3.1.
 ---
 
 # API Reference
 
-This is the hand-curated public surface for v0.3.1. Anything not listed here is internal and may change without notice.
+The complete public surface of **v0.3.1**. Anything not listed here (notably `com.aaravlabs.synapse.internal`) is internal and may change without notice.
 
-## `com.aaravlabs.synapse`
+## `com.aaravlabs.synapse` — core
 
-| Type | Purpose |
+### Orchestrator
+
+The bus. One per robot. Created for you by `SafeOpMode`; in tests use `Orchestrator.create(name)` or `Orchestrator.create(name, logSink)`.
+
+| Method | Returns | Notes |
+| --- | --- | --- |
+| `name()` | `String` | the name given at creation |
+| `getOrCreateTopic(name, type)` | `Topic<T>` | existing-or-new; throws on type conflict; primitives ≡ wrappers |
+| `findTopic(name)` | `Optional<Topic<?>>` | type-agnostic lookup |
+| `findTopic(name, type)` | `Optional<Topic<T>>` | empty if absent or type-incompatible |
+| `publish(name, value)` | `void` | non-blocking; lazy topic creation; latest cache updated synchronously; throws on null value or type conflict |
+| `subscribe(name, type, handler)` | `Subscription` | handler on callback pool; topic auto-created |
+| `getLatestValue(name, type)` | `Optional<T>` | empty if unpublished or type-incompatible |
+| `registerNode(name, node)` | `Node` | binds annotations; duplicate names are a no-op returning the prior node |
+| `unregisterNode(name)` | `void` | cancels the node's loops, subscriptions, and actions; calls `node.close()` |
+| `findNode(name)` | `Optional<Node>` | |
+| `runAction(actionName)` | `CompletableFuture<Void>` | completes on normal return; exceptionally on missing name / closed / action throw |
+| `cancelAllActions()` | `void` | **permanently** shuts the action pool |
+| `runPeriodically(task, hz)` | `ScheduledFuture<?>` | programmatic non-hardware loop |
+| `runOnHardwareThread(task)` | `void` | direct hardware-thread submission |
+| `hardware()` | `HardwareActions` | the facade |
+| `log(msg)` / `log(tag, msg)` / `warn` / `error` | `void` | routed through the `LogSink` |
+| `isClosed()` | `boolean` | true after `close()` |
+| `close()` | `void` | idempotent; unregisters nodes (calls `close()`), shuts all workers |
+
+### Node
+
+Base class for robot logic. `protected final Orchestrator orchestrator` is available to subclasses; constructors must call `super(orch)`.
+
+| Member | Notes |
 | --- | --- |
-| `Orchestrator` | The bus. One per robot. |
-| `Node` | Base class for units of code with annotated callbacks. |
-| `Topic<T>` | Named, typed channel. |
-| `Subscription` | Handle returned by `subscribe()`. |
-| `LogSink` | Pluggable logging. |
+| `close()` | override to release resources; called on unregister/close |
+
+### `Topic<T>`
+
+| Method | Returns |
+| --- | --- |
+| `name()` / `type()` | identity |
+| `latestValue()` | `Optional<T>` |
+| `latestValueOr(default)` | `T` |
+| `latestPublishNanos()` | `long`, `System.nanoTime()` clock |
+
+### Subscription
+
+| Method | Notes |
+| --- | --- |
+| `unsubscribe()` | idempotent |
+
+### LogSink
+
+| Member | Notes |
+| --- | --- |
+| `info` / `warn` / `error` / `error(t)` | `(tag, message)` pairs |
+| `LogSink.STDERR` | writes to `System.err`; used by `Orchestrator.create(name)` |
+| `LogSink.SILENT` | drops everything; useful in tests |
 
 ## `com.aaravlabs.synapse.annotation`
 
-| Annotation | Purpose |
-| --- | --- |
-| `@SubscribedTo(topic = "...")` | Bind a method to a topic. |
-| `@RunPeriodically(hz = 20, hardware = false)` | Loop on a fixed rate. |
-| `@RunnableAction("name")` | Register a fire-on-demand method. |
-| `@OnHardwareThread` | Force a subscriber onto the hardware thread. |
+### @SubscribedTo
+
+| Attribute | Type | Default |
+| --- | --- | --- |
+| `topic` | `String` | — (required, no shorthand) |
+
+Method: 0–1 parameters; single-parameter type must match or be a supertype of the topic's type (primitives ≡ wrappers); mismatched messages are silently dropped. Repeatable. Handler on callback pool unless `@OnHardwareThread`.
+
+### @RunPeriodically
+
+| Attribute | Type | Default |
+| --- | --- | --- |
+| `hz` | `int` | `20` |
+| `hardware` | `boolean` | `false` |
+
+Method: no parameters, non-static. Fixed-delay scheduling (`1000 / hz` ms between completions; effective rate ≤ `hz`; first run immediate). Repeatable. `hz <= 0` warns and skips.
+
+### @RunnableAction
+
+| Attribute | Type | Default |
+| --- | --- | --- |
+| `value` | `String` | — (the action name) |
+
+Method: no parameters, returns `void`, non-static, not repeatable. Fired by `runAction(name)` on the unbounded action pool — **not** the hardware thread. Duplicate names: first wins, second warns.
+
+### @OnHardwareThread
+
+No attributes. Modifier for `@SubscribedTo` methods; re-routes the handler to the dedicated hardware thread.
 
 ## `com.aaravlabs.synapse.ftc`
 
-| Type | Purpose |
+### SafeOpMode
+
+Abstract base extending `OpMode`. Provides fields `orchestrator`, `hardware`, `safeMap` (plus deprecated `orch`). Hooks: `onSafeInit` (abstract), `onSafeInitLoop`, `onSafeStart`, `onSafeLoop`, `onSafeStop`.
+
+### FtcOrchestrator
+
+`create()` — orchestrator named `"ftc"` logging to `android.util.Log` via `AndroidLogSink`; `create(sink)` overrides the sink.
+
+### HardwareActions
+
+Obtained via `orchestrator.hardware()` or the `SafeOpMode` `hardware` field.
+
+| Method | Returns | Notes |
+| --- | --- | --- |
+| `run(action)` | `void` | async fire-and-forget |
+| `call(action)` | `T` | blocks; unwraps exceptions; **deadlocks from the hardware thread** |
+| `call(action, timeout, unit)` | `T` | as above with `TimeoutException` |
+| `callAsync(action)` | `CompletableFuture<T>` | non-blocking; safe from the hardware thread |
+| `bulkRead(hz, reader)` | `BulkReadHandle` | periodic reader on the hardware thread |
+| `stopBulkRead(handle)` | `void` | cancel; null-safe |
+| `isHardwareThread()` | `boolean` | thread identity check |
+| `assertNotHardwareThread()` | `void` | throws `IllegalStateException` on the hardware thread |
+| `tick()` | `void` | reserved no-op; called by `SafeOpMode.loop()` |
+| `shutdown()` | `void` | closes the whole orchestrator (sharp edge) |
+
+### `SafeDevice<T>`
+
+| Method | Returns | Notes |
+| --- | --- | --- |
+| `run(action)` | `void` | async; `Consumer<T>` |
+| `call(action)` | `R` | blocks; `Function<T, R>`; **deadlocks from the hardware thread** |
+| `callAsync(action)` | `CompletableFuture<R>` | non-blocking |
+| `raw()` | `T` | hardware-thread code only |
+
+### SafeHardwareMap
+
+| Method | Returns |
 | --- | --- |
-| `SafeOpMode` | Drop-in `OpMode` base class. |
-| `FtcOrchestrator` | Factory that wires `android.util.Log` into a `LogSink`. |
-| `HardwareActions` | `run` / `call` / `callAsync` / `bulkRead` over the hardware thread. |
-| `SafeDevice<T>` | Hardware wrapper that routes through the hardware thread. |
-| `SafeHardwareMap` | `HardwareMap` that produces `SafeDevice<T>`s. |
-| `GamepadAdaptor` | Reflects `Gamepad` fields into topics. |
-| `BulkReader` | Functional interface for `bulkRead`. |
-| `HardwareView` | Publishes values from a `bulkRead` callback. |
-| `AndroidLogSink` | `LogSink` that writes to `android.util.Log`. |
+| `device(deviceClass, name)` | `SafeDevice<T>` |
+| `raw()` | the underlying `HardwareMap` |
+
+### GamepadAdaptor
+
+`attach(orch, gamepad, parentTopic)` → registers node `GamepadAdaptor:<parentTopic>` and returns that name. Publishes at 60 Hz on the scheduler pool: `<btn>` (Boolean), `<btn>/rising`, `<btn>/falling` (Boolean, `true` on the transition), `<axis>` (Float). Pre-creates all topics at attach time.
+
+### BulkReader
+
+`read(HardwareView view)` — functional interface for `bulkRead`; runs on the hardware thread.
+
+### HardwareView
+
+`publish(topic, value)` and `getLatestValue(topic, type)` — the write/read surface inside a bulk-read callback.
+
+### AndroidLogSink
+
+`LogSink` forwarding to `android.util.Log` by reflection; no-op on desktop JVMs.
+
+## Next steps
+
+- [Architecture](/docs/concepts/architecture) — the behavior behind this surface.
+- [Recipes](/docs/recipes) — the surface composed into robot-validated patterns.

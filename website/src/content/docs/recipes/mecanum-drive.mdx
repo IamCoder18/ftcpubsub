@@ -1,55 +1,199 @@
 ---
 title: Mecanum drive
-description: Robot-centric mecanum with two joysticks (normalized to [-1, 1]).
+description: Robot-centric mecanum with subsystem nodes, per-wheel telemetry, and a direction test — verified on a real robot.
 ---
 
 # Mecanum drive (robot-centric)
 
-This recipe is **robot-centric**: the joystick vector goes straight to the motor mix. For field-centric control, add a heading-based rotation of `(x, y)` before the mix.
+This recipe is the drivetrain actually running on the 23684 Canopy-Biobuzz robot ([PR #3](https://github.com/ATAARobotics/23684-Canopy-Biobuzz/pull/3)): joystick inputs go straight to the motor mix at 50 Hz on the hardware thread, each wheel's commanded power is published to its own topic, and a test OpMode verifies motor directions before the robot ever drives.
+
+The architecture is the point — three files, each one concern:
+
+```
+TeamCode/src/main/java/org/firstinspires/ftc/teamcode/
+├── OpModes/TeleOp/MainTeleOp.java      wires hardware, renders telemetry
+├── OpModes/Tests/MotorDirectionTest.java  spins each motor from a button
+└── Subsystems/Drive.java               the drive Node
+```
+
+## Step 1 — The drive subsystem
+
+A `Node` with one `@RunPeriodically(hardware = true)` loop. Motor directions are set in the constructor so they're fixed the moment the node is registered.
 
 ```java
-@TeleOp(name = "Mecanum")
-public class Mecanum extends SafeOpMode {
+package org.firstinspires.ftc.teamcode.Subsystems;
 
-    @Override protected void onSafeInit() {
-        SafeDevice<DcMotorEx> fl = safeMap.device(DcMotorEx.class, "frontLeft");
-        SafeDevice<DcMotorEx> fr = safeMap.device(DcMotorEx.class, "frontRight");
-        SafeDevice<DcMotorEx> bl = safeMap.device(DcMotorEx.class, "backLeft");
-        SafeDevice<DcMotorEx> br = safeMap.device(DcMotorEx.class, "backRight");
-        orchestrator.registerNode("drive", new DriveNode(orchestrator, fl, fr, bl, br));
-        GamepadAdaptor.attach(orchestrator, gamepad1, "g1");
+import com.aaravlabs.synapse.Node;
+import com.aaravlabs.synapse.Orchestrator;
+import com.aaravlabs.synapse.annotation.RunPeriodically;
+import com.aaravlabs.synapse.ftc.SafeDevice;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
+
+public class Drive extends Node {
+
+    private final SafeDevice<DcMotorEx> fl;
+    private final SafeDevice<DcMotorEx> fr;
+    private final SafeDevice<DcMotorEx> bl;
+    private final SafeDevice<DcMotorEx> br;
+
+    public Drive(
+            Orchestrator orch,
+            SafeDevice<DcMotorEx> frontLeft,
+            SafeDevice<DcMotorEx> frontRight,
+            SafeDevice<DcMotorEx> backLeft,
+            SafeDevice<DcMotorEx> backRight) {
+        super(orch);
+        this.fl = frontLeft;
+        this.fr = frontRight;
+        this.bl = backLeft;
+        this.br = backRight;
+
+        fl.run(m -> m.setDirection(DcMotor.Direction.FORWARD));
+        bl.run(m -> m.setDirection(DcMotor.Direction.FORWARD));
+        fr.run(m -> m.setDirection(DcMotorSimple.Direction.REVERSE));
+        br.run(m -> m.setDirection(DcMotorSimple.Direction.REVERSE));
     }
 
-    public static class DriveNode extends Node {
-        DriveNode(Orchestrator orchestrator, SafeDevice<DcMotorEx> fl, SafeDevice<DcMotorEx> fr,
-                  SafeDevice<DcMotorEx> bl, SafeDevice<DcMotorEx> br) {
-            super(orchestrator); this.fl = fl; this.fr = fr; this.bl = bl; this.br = br;
-        }
-        private final SafeDevice<DcMotorEx> fl, fr, bl, br;
+    @RunPeriodically(hz = 50, hardware = true)
+    public void drive() {
+        double y = -orchestrator.getLatestValue("g1/left_stick_y", Float.class).map(Float::doubleValue).orElse(0.0);
+        double x = orchestrator.getLatestValue("g1/left_stick_x", Float.class).map(Float::doubleValue).orElse(0.0) * 1.1;
+        double r = -orchestrator.getLatestValue("g1/right_stick_x", Float.class).map(Float::doubleValue).orElse(0.0);
 
-        @RunPeriodically(hz = 50, hardware = true)
-        public void drive() {
-            // GamepadAdaptor publishes axes as Float; map to double for the mix.
-            double y = -orchestrator.getLatestValue("g1/left_stick_y", Float.class).map(Float::doubleValue).orElse(0.0);
-            double x =  orchestrator.getLatestValue("g1/left_stick_x", Float.class).map(Float::doubleValue).orElse(0.0);
-            double r =  orchestrator.getLatestValue("g1/right_stick_x", Float.class).map(Float::doubleValue).orElse(0.0);
+        double pFL = y + x + r;
+        double pFR = y - x - r;
+        double pBL = y - x + r;
+        double pBR = y + x - r;
+        double max = Math.max(Math.abs(y) + Math.abs(x) + Math.abs(r), 1);
 
-            // DcMotorEx.setPower requires values in [-1, 1]; normalize so the
-            // mix never clips when the joystick vector is large.
-            double pFL = y + x + r;
-            double pFR = y - x - r;
-            double pBL = y - x + r;
-            double pBR = y + x - r;
-            double max = Math.max(1.0, Math.max(Math.abs(pFL),
-                              Math.max(Math.abs(pFR),
-                              Math.max(Math.abs(pBL), Math.abs(pBR)))));
-            fl.run(m -> m.setPower(pFL / max));
-            fr.run(m -> m.setPower(pFR / max));
-            bl.run(m -> m.setPower(pBL / max));
-            br.run(m -> m.setPower(pBR / max));
-        }
+        fl.run(m -> m.setPower(pFL / max));
+        fr.run(m -> m.setPower(pFR / max));
+        bl.run(m -> m.setPower(pBL / max));
+        br.run(m -> m.setPower(pBR / max));
+
+        orchestrator.publish("drive/power/fl", pFL / max);
+        orchestrator.publish("drive/power/fr", pFR / max);
+        orchestrator.publish("drive/power/bl", pBL / max);
+        orchestrator.publish("drive/power/br", pBR / max);
     }
 }
 ```
 
-The loop runs on the hardware thread. The four motor writes are submitted to the same thread and execute serially, so they cannot race each other.
+Why it is written this way:
+
+- **The loop is `hardware = true`.** It touches four motors, so it must run on the hardware thread — and at 50 Hz (a 20 ms period), well above what a driver can perceive.
+- **The inputs come from topics**, not the gamepad object. The node has no reference to any OpMode; feed it different topics and it drives the same.
+- **Strafe is scaled `* 1.1`.** A common gm0-style correction for the geometric inefficiency of sideways sliding on mecanum rollers — bump or drop the factor after testing.
+- **One normalization for all four wheels.** Dividing by `max(|y| + |x| + |r|, 1)` keeps every wheel within `[-1, 1]` *and* preserves the intended motion direction. Dividing each wheel by its own maximum instead would tilt the robot's commanded direction under full deflection.
+- **Per-wheel powers are published.** Telemetry subscribes to `drive/power/*` instead of reading motors, so the OpMode stays off the hardware path entirely.
+
+## Step 2 — The OpMode
+
+The OpMode owns wiring and telemetry. It never touches a motor directly.
+
+```java
+package org.firstinspires.ftc.teamcode.OpModes.TeleOp;
+
+import com.aaravlabs.synapse.ftc.GamepadAdaptor;
+import com.aaravlabs.synapse.ftc.SafeDevice;
+import com.aaravlabs.synapse.ftc.SafeOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+
+import org.firstinspires.ftc.teamcode.Subsystems.Drive;
+
+@TeleOp(name = "Main TeleOp", group = "TeleOp")
+public class MainTeleOp extends SafeOpMode {
+
+    private SafeDevice<DcMotorEx> frontLeft;
+    private SafeDevice<DcMotorEx> frontRight;
+    private SafeDevice<DcMotorEx> backLeft;
+    private SafeDevice<DcMotorEx> backRight;
+
+    @Override
+    protected void onSafeInit() {
+        frontLeft = safeMap.device(DcMotorEx.class, "frontLeft");
+        frontRight = safeMap.device(DcMotorEx.class, "frontRight");
+        backLeft = safeMap.device(DcMotorEx.class, "backLeft");
+        backRight = safeMap.device(DcMotorEx.class, "backRight");
+
+        GamepadAdaptor.attach(orchestrator, gamepad1, "g1");
+
+        orchestrator.registerNode("drive",
+                new Drive(orchestrator, frontLeft, frontRight, backLeft, backRight));
+    }
+
+    @Override
+    protected void onSafeLoop() {
+        telemetry.addData("FL", "%.2f", orchestrator.getLatestValue("drive/power/fl", Double.class).orElse(0.0));
+        telemetry.addData("FR", "%.2f", orchestrator.getLatestValue("drive/power/fr", Double.class).orElse(0.0));
+        telemetry.addData("BL", "%.2f", orchestrator.getLatestValue("drive/power/bl", Double.class).orElse(0.0));
+        telemetry.addData("BR", "%.2f", orchestrator.getLatestValue("drive/power/br", Double.class).orElse(0.0));
+        telemetry.update();
+    }
+}
+```
+
+> **Device names must match your Robot Configuration.** `"frontLeft"`, `"frontRight"`, `"backLeft"`, `"backRight"` here are configuration names — if your config uses `leftFront` or `lf`, change the strings, not the wiring.
+
+## Step 3 — Verify motor directions
+
+Motor spin direction depends on wiring, gearing, and mounting — not code. Before the first real drive, spin each motor individually from a button:
+
+```java
+package org.firstinspires.ftc.teamcode.OpModes.Tests;
+
+import com.aaravlabs.synapse.ftc.GamepadAdaptor;
+import com.aaravlabs.synapse.ftc.SafeDevice;
+import com.aaravlabs.synapse.ftc.SafeOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+
+@TeleOp(name = "Motor Direction Test", group = "Tests")
+public class MotorDirectionTest extends SafeOpMode {
+
+    private SafeDevice<DcMotorEx> frontLeft;
+    private SafeDevice<DcMotorEx> frontRight;
+    private SafeDevice<DcMotorEx> backLeft;
+    private SafeDevice<DcMotorEx> backRight;
+
+    @Override
+    protected void onSafeInit() {
+        frontLeft = safeMap.device(DcMotorEx.class, "frontLeft");
+        frontRight = safeMap.device(DcMotorEx.class, "frontRight");
+        backLeft = safeMap.device(DcMotorEx.class, "backLeft");
+        backRight = safeMap.device(DcMotorEx.class, "backRight");
+
+        GamepadAdaptor.attach(orchestrator, gamepad1, "g1");
+
+        orchestrator.subscribe("g1/x", Boolean.class, v -> frontLeft.run(m -> m.setPower(v ? 1.0 : 0.0)));
+        orchestrator.subscribe("g1/a", Boolean.class, v -> backLeft.run(m -> m.setPower(v ? 1.0 : 0.0)));
+        orchestrator.subscribe("g1/y", Boolean.class, v -> frontRight.run(m -> m.setPower(v ? 1.0 : 0.0)));
+        orchestrator.subscribe("g1/b", Boolean.class, v -> backRight.run(m -> m.setPower(v ? 1.0 : 0.0)));
+    }
+
+    @Override
+    protected void onSafeLoop() {
+        telemetry.addData("frontLeft", "X");
+        telemetry.addData("backLeft", "A");
+        telemetry.addData("frontRight", "Y");
+        telemetry.addData("backRight", "B");
+        telemetry.update();
+    }
+}
+```
+
+Run this **on the bench, wheels off the ground**. Hold each button and check the wheel spins the way the mix expects — forward for X/A/Y/B. A wheel spinning backward needs its `setDirection` flipped in `Drive`'s constructor. Five minutes here saves a mystery-bug session later.
+
+## Adapting it
+
+- **Different control scheme?** The loop only reads three topics — retarget `g1/...` to whatever inputs you like.
+- **Adding subsystems?** Each one is another `Subsystems/` node registered in `onSafeInit`, exactly like the [two-controller teleop](/docs/recipes/two-controller-teleop) intake.
+- **Field-centric control?** Fully supported today via the IMU API — a recipe page appears once the pattern is [verified on hardware](/docs/recipes).
+
+## Next steps
+
+- [Two-controller teleop](/docs/recipes/two-controller-teleop) — adding an operator.
+- [Architecture](/docs/concepts/architecture) — why the loop runs where it runs.

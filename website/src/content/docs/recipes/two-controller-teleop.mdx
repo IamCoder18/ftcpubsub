@@ -1,24 +1,86 @@
 ---
 title: Two-controller teleop
-description: One driver, one operator, two gamepads.
+description: Driver + operator gamepads with per-gamepad topics — verified on a real robot.
 ---
 
 # Two-controller teleop
 
+Synapse needs nothing special for two gamepads — attach a second `GamepadAdaptor` with a different prefix. What makes the pattern worth copying is how the [23684 Canopy-Biobuzz robot](https://github.com/ATAARobotics/23684-Canopy-Biobuzz/pull/3) splits authority: each subsystem node decides for itself which gamepad(s) it listens to, and the OpMode only wires things up.
+
+## Attach both gamepads
+
 ```java
 @Override
 protected void onSafeInit() {
-    GamepadAdaptor.attach(orchestrator, gamepad1, "driver");
-    GamepadAdaptor.attach(orchestrator, gamepad2, "operator");
+    GamepadAdaptor.attach(orchestrator, gamepad1, "g1");
+    GamepadAdaptor.attach(orchestrator, gamepad2, "g2");
 }
 ```
 
-Now driver buttons live at `driver/a`, `driver/right_bumper`, … and operator buttons live at `operator/...`. Subscribe as normal:
+Driver controls now live at `g1/...` and operator controls at `g2/...` — same topics as one gamepad, different roots.
+
+## Give a subsystem two inputs
+
+The intake takes its power from *both* gamepads: the operator's left stick and the driver's left trigger, whichever is larger. The node encapsulates that policy:
 
 ```java
-@SubscribedTo(topic = "operator/y")
-@OnHardwareThread
-public void onOperatorY(Boolean v) { /* … */ }
+package org.firstinspires.ftc.teamcode.Subsystems;
+
+import com.aaravlabs.synapse.Node;
+import com.aaravlabs.synapse.Orchestrator;
+import com.aaravlabs.synapse.annotation.RunPeriodically;
+import com.aaravlabs.synapse.ftc.SafeDevice;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+
+public class Intake extends Node {
+
+    private final SafeDevice<DcMotorEx> intake;
+
+    public Intake(Orchestrator orch, SafeDevice<DcMotorEx> intake) {
+        super(orch);
+        this.intake = intake;
+    }
+
+    @RunPeriodically(hz = 50, hardware = true)
+    public void runIntake() {
+        double operator = -orchestrator.getLatestValue("g2/left_stick_y", Float.class).map(Float::doubleValue).orElse(0.0);
+        double trigger = orchestrator.getLatestValue("g1/left_trigger", Float.class).map(Float::doubleValue).orElse(0.0);
+        double power = Math.max(operator, trigger);
+        intake.run(m -> m.setPower(power));
+        orchestrator.publish("intake/power", power);
+    }
+}
 ```
 
-The two adaptors are independent — attach each in `onSafeInit` and the rest is just topic naming.
+Register it alongside the drive node in `onSafeInit()`:
+
+```java
+orchestrator.registerNode("drive", new Drive(orchestrator, frontLeft, frontRight, backLeft, backRight));
+orchestrator.registerNode("intake", new Intake(orchestrator, intake));
+```
+
+Why this shape works on a real robot:
+
+- **The priority rule lives in one place.** "Driver trigger always wins" is a property of the intake, not of the OpMode — if the operator is running the intake and the driver opens the trigger, the intake obeys the driver, with no ordering logic anywhere else.
+- **Triggers are `Float` axes**, not buttons — read them with `getLatestValue(..., Float.class)` exactly like sticks.
+- **The subsystem publishes its state** (`intake/power`) so telemetry renders it without touching hardware.
+
+## Buttons across gamepads
+
+Subscriptions and actions work per-prefix too. An operator-pressed claw toggle looks like:
+
+```java
+@SubscribedTo(topic = "g2/right_bumper/rising")
+@OnHardwareThread
+public void toggleClaw(Boolean v) {
+    claw.run(s -> s.setPosition(clawOpen ? CLOSED : OPEN));
+}
+```
+
+> **Prefix discipline is the whole pattern.** `g1` is the driver, `g2` is the operator — never subscribe a subsystem to both roots "whenever convenient". If a control needs both gamepads, encode the policy inside the subsystem like the intake above, so the priority is written down exactly once.
+
+## Next steps
+
+- [Mecanum drive](/docs/recipes/mecanum-drive) — the drive node this recipe registers alongside.
+- [GamepadAdaptor](/docs/ftc/gamepad-adaptor) — the full topic surface each gamepad publishes.
+

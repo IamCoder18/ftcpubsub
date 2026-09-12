@@ -1,0 +1,130 @@
+---
+title: Migrating to Synapse
+description: Move an existing raw OpMode onto Synapse, subsystem by subsystem.
+---
+
+# Migrating to Synapse
+
+Synapse does not demand a rewrite. A standard FTC codebase — an OpMode with some `DcMotorEx` fields and a big `loop()` — migrates one subsystem at a time. This guide walks through the exact sequence the [23684 Canopy-Biobuzz robot](https://github.com/ATAARobotics/23684-Canopy-Biobuzz/pull/3) used.
+
+## Prerequisites
+
+- [Synapse installed](/docs/get-started/install) in your TeamCode project.
+- An existing OpMode (or a whole codebase) that touches hardware directly.
+
+## Step 1 — Find every hardware touch
+
+Grep the OpMode and every helper it calls for the full set of SDK calls:
+
+```text
+setPower(    setPosition(    setVelocity(    setDirection(
+getCurrentPosition(          getCurrent(     hardwareMap.get(
+```
+
+Scan **all** lifecycle paths — `init()`, `init_loop()`, `start()`, `loop()`, `stop()`, and every helper they call. Hardware writes hide inside `start()` (encoder resets) and inside private methods called from `loop()`. Each call site found here is a site that must route through the hardware thread later.
+
+## Step 2 — Switch the base class
+
+Replace `extends OpMode` with `extends SafeOpMode`, and the overrides:
+
+```text
+init()      → onSafeInit()      (required)
+init_loop() → onSafeInitLoop()
+start()     → onSafeStart()
+loop()      → onSafeLoop()
+stop()      → onSafeStop()
+```
+
+You now have `orchestrator`, `hardware`, and `safeMap` ready. If the old code used `telemetry` or `gamepad1/2` in `loop()`, keep doing that — those are still fine from the OpMode thread.
+
+## Step 3 — Wrap each device
+
+For every `hardwareMap.get(...)` call, produce a `SafeDevice` from `safeMap`:
+
+```java
+// was: DcMotorEx intake = hardwareMap.get(DcMotorEx.class, "intake");
+SafeDevice<DcMotorEx> intake = safeMap.device(DcMotorEx.class, "intake");
+```
+
+Then mechanically rewrite the call sites:
+
+```java
+// was: intake.setPower(0.5);
+intake.run(m -> m.setPower(0.5));
+
+// was: int pos = intake.getCurrentPosition();
+int pos = intake.call(DcMotorEx::getCurrentPosition);
+```
+
+This step alone makes the existing OpMode hardware-thread-safe — it compiles, runs, and you can verify nothing regressed before going further.
+
+## Step 4 — Name the topics
+
+Before extracting nodes, decide the topic surface. A good pass:
+
+- one root per subsystem: `drive/...`, `intake/...`, `shooter/...`;
+- gamepad inputs already have roots if you attach a `GamepadAdaptor`: `g1/...`, `g2/...`;
+- state that telemetry needs gets its own topic (`intake/power`), so the OpMode never reads devices for display.
+
+## Step 5 — Extract one subsystem into a Node
+
+Lift the per-subsystem code out of `loop()` into a node. The loop's *inputs* become `getLatestValue` calls; its *outputs* become `SafeDevice` writes and `publish`es:
+
+```java
+public class Intake extends Node {
+
+    private final SafeDevice<DcMotorEx> intake;
+
+    public Intake(Orchestrator orch, SafeDevice<DcMotorEx> intake) {
+        super(orch);
+        this.intake = intake;
+    }
+
+    @RunPeriodically(hz = 50, hardware = true)
+    public void runIntake() {
+        double operator = -orchestrator.getLatestValue("g2/left_stick_y", Float.class).map(Float::doubleValue).orElse(0.0);
+        double trigger = orchestrator.getLatestValue("g1/left_trigger", Float.class).map(Float::doubleValue).orElse(0.0);
+        double power = Math.max(operator, trigger);
+        intake.run(m -> m.setPower(power));
+        orchestrator.publish("intake/power", power);
+    }
+}
+```
+
+Reacting-to-an-event logic (button edges, setpoints) becomes `@SubscribedTo` methods, with `@OnHardwareThread` if they touch devices.
+
+## Step 6 — Register nodes in onSafeInit
+
+```java
+@Override
+protected void onSafeInit() {
+    frontLeft = safeMap.device(DcMotorEx.class, "frontLeft");
+    // ... other devices ...
+    GamepadAdaptor.attach(orchestrator, gamepad1, "g1");
+    orchestrator.registerNode("drive", new Drive(orchestrator, frontLeft, frontRight, backLeft, backRight));
+    orchestrator.registerNode("intake", new Intake(orchestrator, intake));
+}
+```
+
+Node names are unique — a duplicate name silently skips registration (with a warning), so pick names that match the subsystem files.
+
+## Step 7 — Verify on the robot
+
+Migration is not done until it's verified:
+
+1. **Bench, wheels off the ground**: run the [direction test](/docs/recipes/mecanum-drive#step-3-verify-motor-directions) pattern; check every motor spins correctly.
+2. **Driver Station**: the OpMode appears in the TeleOp list and shows telemetry.
+3. **Driving**: controls map as expected, no `IllegalStateException` in Logcat.
+
+The PR checklist used for the reference migration is a good template: wired correctly, runs without errors, telemetry correct, controls mapped, verified on robot.
+
+## Rules that keep the migration honest
+
+- **No raw device calls remain.** If Step 1 found a call site, Step 3 must have rewritten it. One missed call site reintroduces the thread-safety race.
+- **Do not create a second orchestrator.** `SafeOpMode` owns the lifecycle; constructing `Orchestrator.create(...)` inside an OpMode duplicates pools and breaks cleanup.
+- **Migrate subsystem-by-subsystem.** Steps 3–6 per subsystem, verified on the bench each time — not a single big-bang rewrite of every subsystem at once.
+
+## Next steps
+
+- [Mecanum drive](/docs/recipes/mecanum-drive) — what the finished drive subsystem looks like.
+- [Troubleshooting](/docs/guides/troubleshooting) — when something in the migrated code misbehaves.

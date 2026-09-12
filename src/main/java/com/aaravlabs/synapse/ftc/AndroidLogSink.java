@@ -13,23 +13,24 @@ public final class AndroidLogSink implements LogSink {
 
     private static final Class<?> LOG_CLASS = resolve("android.util.Log");
 
-    @Override
-    public void info(String tag, String message) {
+    /**
+     * Create a sink that writes to {@code android.util.Log} (no-op on desktop JVMs).
+     */
+    public AndroidLogSink() {}
+
+    @Override public void info(String tag, String message) {
         invoke("i", tag, message);
     }
 
-    @Override
-    public void warn(String tag, String message) {
+    @Override public void warn(String tag, String message) {
         invoke("w", tag, message);
     }
 
-    @Override
-    public void error(String tag, String message) {
+    @Override public void error(String tag, String message) {
         invoke("e", tag, message);
     }
 
-    @Override
-    public void error(String tag, String message, Throwable t) {
+    @Override public void error(String tag, String message, Throwable t) {
         invoke("e", tag, message);
         if (t != null) {
             for (StackTraceElement el : t.getStackTrace()) {
