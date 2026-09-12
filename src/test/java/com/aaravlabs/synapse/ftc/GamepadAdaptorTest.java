@@ -28,10 +28,10 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class GamepadAdaptorTest {
 
-    private Orchestrator orch;
+    private Orchestrator orchestrator;
 
-    @BeforeEach void setUp() { orch = FtcOrchestrator.create(); }
-    @AfterEach  void tearDown() { orch.close(); }
+    @BeforeEach void setUp() { orchestrator = FtcOrchestrator.create(); }
+    @AfterEach  void tearDown() { orchestrator.close(); }
 
     @Test
     void discoversEveryPublicBooleanFieldOnRealGamepad() throws Exception {
@@ -44,19 +44,19 @@ class GamepadAdaptorTest {
                 "expected 10 public float fields on real SDK Gamepad, got " + expectedAxes);
 
         Gamepad gp = new Gamepad();
-        GamepadAdaptor.attach(orch, gp, "pad");
+        GamepadAdaptor.attach(orchestrator, gp, "pad");
 
         // Pre-create topics for every field.
         Set<String> createdButtonTopics = new HashSet<>();
         Set<String> createdAxisTopics = new HashSet<>();
         for (String f : expectedButtons) {
             String base = "pad/" + f;
-            if (orch.findTopic(base, Boolean.class).isPresent()) createdButtonTopics.add(f);
-            if (orch.findTopic(base + "/rising", Boolean.class).isPresent()) createdButtonTopics.add(f);
-            if (orch.findTopic(base + "/falling", Boolean.class).isPresent()) createdButtonTopics.add(f);
+            if (orchestrator.findTopic(base, Boolean.class).isPresent()) createdButtonTopics.add(f);
+            if (orchestrator.findTopic(base + "/rising", Boolean.class).isPresent()) createdButtonTopics.add(f);
+            if (orchestrator.findTopic(base + "/falling", Boolean.class).isPresent()) createdButtonTopics.add(f);
         }
         for (String f : expectedAxes) {
-            if (orch.findTopic("pad/" + f, Float.class).isPresent()) createdAxisTopics.add(f);
+            if (orchestrator.findTopic("pad/" + f, Float.class).isPresent()) createdAxisTopics.add(f);
         }
 
         assertEquals(expectedButtons, createdButtonTopics,
@@ -68,7 +68,7 @@ class GamepadAdaptorTest {
     @Test
     void publishesRealSdkButtonNames() throws Exception {
         Gamepad gp = new Gamepad();
-        GamepadAdaptor.attach(orch, gp, "pad");
+        GamepadAdaptor.attach(orchestrator, gp, "pad");
 
         // Confirm at least one field per "category" from the real SDK round-trips.
         for (String name : new String[]{
@@ -77,7 +77,7 @@ class GamepadAdaptorTest {
                 "left_bumper", "right_bumper", "start", "back",
                 "left_trigger_pressed", "right_trigger_pressed",
                 "touchpad", "touchpad_finger_1", "touchpad_finger_2"}) {
-            assertTrue(orch.findTopic("pad/" + name, Boolean.class).isPresent(),
+            assertTrue(orchestrator.findTopic("pad/" + name, Boolean.class).isPresent(),
                     "topic for real SDK boolean '" + name + "' should exist");
         }
 
@@ -86,7 +86,7 @@ class GamepadAdaptorTest {
                 "left_trigger", "right_trigger",
                 "touchpad_finger_1_x", "touchpad_finger_1_y",
                 "touchpad_finger_2_x", "touchpad_finger_2_y"}) {
-            assertTrue(orch.findTopic("pad/" + name, Float.class).isPresent(),
+            assertTrue(orchestrator.findTopic("pad/" + name, Float.class).isPresent(),
                     "topic for real SDK float '" + name + "' should exist");
         }
     }
@@ -106,28 +106,28 @@ class GamepadAdaptorTest {
         // id (int), timestamp (long), and nextRumbleApproxFinishTime (long) are
         // public but not boolean or float — they should NOT generate topics.
         Gamepad gp = new Gamepad();
-        GamepadAdaptor.attach(orch, gp, "pad");
+        GamepadAdaptor.attach(orchestrator, gp, "pad");
 
-        assertTrue(orch.findTopic("pad/id", Integer.class).isEmpty(),
+        assertTrue(orchestrator.findTopic("pad/id", Integer.class).isEmpty(),
                 "int field should not generate a topic");
-        assertTrue(orch.findTopic("pad/timestamp", Long.class).isEmpty(),
+        assertTrue(orchestrator.findTopic("pad/timestamp", Long.class).isEmpty(),
                 "long field should not generate a topic");
-        assertTrue(orch.findTopic("pad/nextRumbleApproxFinishTime", Long.class).isEmpty(),
+        assertTrue(orchestrator.findTopic("pad/nextRumbleApproxFinishTime", Long.class).isEmpty(),
                 "long field should not generate a topic");
     }
 
     @Test
     void mutationTriggersRisingAndFalling() throws Exception {
         Gamepad gp = new Gamepad();
-        GamepadAdaptor.attach(orch, gp, "pad");
+        GamepadAdaptor.attach(orchestrator, gp, "pad");
 
         List<Boolean> rising = new CopyOnWriteArrayList<>();
         List<Boolean> falling = new CopyOnWriteArrayList<>();
         List<Float> stickX = new CopyOnWriteArrayList<>();
 
-        orch.subscribe("pad/right_bumper/rising", Boolean.class, rising::add);
-        orch.subscribe("pad/right_bumper/falling", Boolean.class, falling::add);
-        orch.subscribe("pad/left_stick_x", Float.class, stickX::add);
+        orchestrator.subscribe("pad/right_bumper/rising", Boolean.class, rising::add);
+        orchestrator.subscribe("pad/right_bumper/falling", Boolean.class, falling::add);
+        orchestrator.subscribe("pad/left_stick_x", Float.class, stickX::add);
 
         gp.right_bumper = true;
         gp.left_stick_x = 0.75f;

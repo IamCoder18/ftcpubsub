@@ -80,7 +80,7 @@ smallest** library in the niche:
   action pool keeps one-shot invocations from being rejected under load.
 - **Zero runtime dependencies.** 40 KB JAR. R8 survival is verified by
   running the test suite through minification.
-- **Gamepad-to-topic in one line.** `GamepadAdaptor.attach(orch, gamepad1, "g1")`
+- **Gamepad-to-topic in one line.** `GamepadAdaptor.attach(orchestrator, gamepad1, "g1")`
   publishes buttons (current, rising, falling) and axes at 60 Hz.
 
 ## Why pub/sub for FTC?
@@ -116,8 +116,8 @@ public class SynapseDemo extends SafeOpMode {
     }
 
     public static class DriveNode extends Node {
-        DriveNode(Orchestrator orch, SafeDevice<DcMotorEx> left, SafeDevice<DcMotorEx> right) {
-            super(orch);
+        DriveNode(Orchestrator orchestrator, SafeDevice<DcMotorEx> left, SafeDevice<DcMotorEx> right) {
+            super(orchestrator);
             this.left = left;
             this.right = right;
         }

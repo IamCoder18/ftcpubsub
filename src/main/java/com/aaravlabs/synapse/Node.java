@@ -21,8 +21,8 @@ import com.aaravlabs.synapse.internal.AnnotationBinder;
  * <p>Example:
  * <pre>{@code
  * public class Drivetrain extends Node {
- *     public Drivetrain(Orchestrator orch) {
- *         super(orch);
+ *     public Drivetrain(Orchestrator orchestrator) {
+ *         super(orchestrator);
  *     }
  *
  *     @SubscribedTo(topic = "drive/set")

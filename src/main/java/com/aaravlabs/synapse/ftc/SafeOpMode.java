@@ -25,30 +25,40 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
  * @TeleOp(name = "My OpMode")
  * public class MyOpMode extends SafeOpMode {
  *     @Override protected void onSafeInit() {
- *         // hardwareMap, hardware, orch, safeMap are all initialized for you.
+ *         // hardwareMap, hardware, orchestrator, safeMap are all initialized for you.
  *         SafeDevice<DcMotorEx> intake = safeMap.device(DcMotorEx.class, "intake");
- *         orch.registerNode("intake", new IntakeNode(orch, intake));
+ *         orchestrator.registerNode("intake", new IntakeNode(orchestrator, intake));
  *     }
  *
  *     @Override protected void onSafeLoop() {
  *         // Default loop body. You may also override loop() yourself if you
  *         // need full control, but then call super.loop() to get the
  *         // thread assertion + tick.
- *         orch.publish("tick", System.nanoTime());
+ *         orchestrator.publish("tick", System.nanoTime());
  *     }
  * }
  * }</pre>
  */
 public abstract class SafeOpMode extends OpMode {
 
+    protected Orchestrator orchestrator;
+
+    /**
+     * @deprecated use {@link #orchestrator}. Retained as a deprecated alias so
+     *             existing FTC team code that still references {@code this.orch}
+     *             keeps compiling with a deprecation warning.
+     */
+    @Deprecated
     protected Orchestrator orch;
+
     protected HardwareActions hardware;
     protected SafeHardwareMap safeMap;
 
     @Override
     public final void init() {
-        orch = FtcOrchestrator.create();
-        hardware = orch.hardware();
+        orchestrator = FtcOrchestrator.create();
+        orch = orchestrator;
+        hardware = orchestrator.hardware();
         safeMap = new SafeHardwareMap(hardwareMap, hardware);
         onSafeInit();
     }
@@ -73,7 +83,7 @@ public abstract class SafeOpMode extends OpMode {
     @Override
     public void stop() {
         onSafeStop();
-        orch.close();
+        orchestrator.close();
     }
 
     // ---- user-overridable hooks ----------------------------------------
@@ -90,6 +100,6 @@ public abstract class SafeOpMode extends OpMode {
     /** Called when the OpMode starts. Defaults to no-op. */
     protected void onSafeStart() {}
 
-    /** Called when the OpMode stops, before orch is closed. Defaults to no-op. */
+    /** Called when the OpMode stops, before orchestrator is closed. Defaults to no-op. */
     protected void onSafeStop() {}
 }

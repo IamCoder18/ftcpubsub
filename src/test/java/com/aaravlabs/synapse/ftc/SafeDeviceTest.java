@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class SafeDeviceTest {
 
-    private Orchestrator orch;
+    private Orchestrator orchestrator;
     private HardwareActions hw;
 
     /** Stand-in for a hardware device. */
@@ -49,8 +49,8 @@ class SafeDeviceTest {
         }
     }
 
-    @BeforeEach void setUp() { orch = Orchestrator.create("test"); hw = orch.hardware(); }
-    @AfterEach  void tearDown() { orch.close(); }
+    @BeforeEach void setUp() { orchestrator = Orchestrator.create("test"); hw = orchestrator.hardware(); }
+    @AfterEach  void tearDown() { orchestrator.close(); }
 
     @Test
     void run_routesCallToHardwareThread() throws Exception {

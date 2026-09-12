@@ -49,7 +49,7 @@ Synapse is a tiny Java library (FTC-compatible Maven coords `com.aaravlabs:synap
 ### "Periodic vs action vs subscription?"
 
 - Needs to fire every N ms regardless of input → `@RunPeriodically(hz=N)`.
-- One-shot in response to a button → `@RunnableAction("name")` + `orch.runAction("name")`.
+- One-shot in response to a button → `@RunnableAction("name")` + `orchestrator.runAction("name")`.
 - Reactive to a state change → `@SubscribedTo("topic")`.
 
 ### "Topic type — primitive vs wrapper?"
@@ -62,8 +62,8 @@ Synapse is a tiny Java library (FTC-compatible Maven coords `com.aaravlabs:synap
 
 ```java
 public class DriveNode extends Node {
-    public DriveNode(Orchestrator orch, SafeDevice<DcMotorEx> left, SafeDevice<DcMotorEx> right) {
-        super(orch);
+    public DriveNode(Orchestrator orchestrator, SafeDevice<DcMotorEx> left, SafeDevice<DcMotorEx> right) {
+        super(orchestrator);
         // Registration happens from the owning OpMode, not from the node's
         // own constructor — see Common mistake #2.
     }

@@ -23,23 +23,23 @@ public final class AnnotationBinder {
 
     private AnnotationBinder() {}
 
-    public static void bindNode(OrchestratorImpl orch, Node node, String nodeName) {
+    public static void bindNode(OrchestratorImpl orchestrator, Node node, String nodeName) {
         for (Method m : allDeclaredMethods(node.getClass())) {
-            wireRunPeriodically(orch, node, m);
-            wireSubscribedTos(orch, node, m);
-            wireRunnableAction(orch, node, m);
+            wireRunPeriodically(orchestrator, node, m);
+            wireSubscribedTos(orchestrator, node, m);
+            wireRunnableAction(orchestrator, node, m);
         }
     }
 
-    public static void unbindNode(OrchestratorImpl orch, Node node) {
-        orch.cleanupNode(node);
+    public static void unbindNode(OrchestratorImpl orchestrator, Node node) {
+        orchestrator.cleanupNode(node);
     }
 
     // ----------------------------------------------------------------------
     // @RunPeriodically
     // ----------------------------------------------------------------------
 
-    private static void wireRunPeriodically(OrchestratorImpl orch, Node node, Method m) {
+    private static void wireRunPeriodically(OrchestratorImpl orchestrator, Node node, Method m) {
         RunPeriodically[] rps = m.getAnnotationsByType(RunPeriodically.class);
         if (rps.length == 0) return;
 
@@ -55,40 +55,40 @@ public final class AnnotationBinder {
         m.setAccessible(true);
         for (RunPeriodically rp : rps) {
             if (rp.hz() <= 0) {
-                orch.warn("@RunPeriodically hz must be > 0 on " + m);
+                orchestrator.warn("@RunPeriodically hz must be > 0 on " + m);
                 continue;
             }
             long delayMs = Math.max(1, 1000L / rp.hz());
 
             ScheduledFuture<?> f;
             if (rp.hardware()) {
-                f = orch.scheduleHardwarePeriodic(() -> {
+                f = orchestrator.scheduleHardwarePeriodic(() -> {
                     try {
                         m.invoke(node);
                     } catch (java.lang.reflect.InvocationTargetException ite) {
                         Throwable cause = ite.getCause() != null ? ite.getCause() : ite;
-                        orch.error("@RunPeriodically(hardware) method threw: " + m, cause);
+                        orchestrator.error("@RunPeriodically(hardware) method threw: " + m, cause);
                         throw new RuntimeException(cause);
                     } catch (Throwable t) {
-                        orch.error("@RunPeriodically(hardware) method threw: " + m, t);
+                        orchestrator.error("@RunPeriodically(hardware) method threw: " + m, t);
                         throw new RuntimeException(t);
                     }
                 }, delayMs);
             } else {
-                f = orch.schedulePeriodic(() -> {
+                f = orchestrator.schedulePeriodic(() -> {
                     try {
                         m.invoke(node);
                     } catch (java.lang.reflect.InvocationTargetException ite) {
                         Throwable cause = ite.getCause() != null ? ite.getCause() : ite;
-                        orch.error("@RunPeriodically method threw: " + m, cause);
+                        orchestrator.error("@RunPeriodically method threw: " + m, cause);
                         throw new RuntimeException(cause);
                     } catch (Throwable t) {
-                        orch.error("@RunPeriodically method threw: " + m, t);
+                        orchestrator.error("@RunPeriodically method threw: " + m, t);
                         throw new RuntimeException(t);
                     }
                 }, delayMs);
             }
-            orch.trackNodeScheduled(node, f);
+            orchestrator.trackNodeScheduled(node, f);
         }
     }
 
@@ -97,7 +97,7 @@ public final class AnnotationBinder {
     // ----------------------------------------------------------------------
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    private static void wireSubscribedTos(OrchestratorImpl orch, Node node, Method m) {
+    private static void wireSubscribedTos(OrchestratorImpl orchestrator, Node node, Method m) {
         SubscribedTo[] subs = m.getAnnotationsByType(SubscribedTo.class);
         if (subs.length == 0) return;
 
@@ -118,7 +118,7 @@ public final class AnnotationBinder {
                 // thread). We capture paramType via a closure.
                 // The actual subscription handler is built per-topic below.
             } catch (Throwable t) {
-                orch.error("@SubscribedTo handler threw: " + m, t);
+                orchestrator.error("@SubscribedTo handler threw: " + m, t);
             }
         };
         // We don't actually use handlerBody above — each topic gets its own
@@ -126,7 +126,7 @@ public final class AnnotationBinder {
         // check is the only thing we need from here.
 
         for (SubscribedTo sub : subs) {
-            Subscription s = orch.subscribeRaw(sub.topic(), topicType, msg -> {
+            Subscription s = orchestrator.subscribeRaw(sub.topic(), topicType, msg -> {
                 try {
                     if (paramType == null) {
                         m.invoke(node);
@@ -136,10 +136,10 @@ public final class AnnotationBinder {
                     }
                     // else: silently drop — message type didn't match the parameter.
                 } catch (InvocationTargetException ite) {
-                    orch.error("@SubscribedTo handler threw: " + m,
+                    orchestrator.error("@SubscribedTo handler threw: " + m,
                             ite.getCause() != null ? ite.getCause() : ite);
                 } catch (Throwable t) {
-                    orch.error("@SubscribedTo handler threw: " + m, t);
+                    orchestrator.error("@SubscribedTo handler threw: " + m, t);
                 }
             });
             // If @OnHardwareThread is present, re-route this subscription's
@@ -147,9 +147,9 @@ public final class AnnotationBinder {
             // subscription in a special wrapper that, when invoked, submits
             // work to hardwareThread instead of the callback pool.
             if (onHardware) {
-                orch.markSubscriptionAsHardwareThreaded(s);
+                orchestrator.markSubscriptionAsHardwareThreaded(s);
             }
-            orch.trackNodeSubscription(node, s);
+            orchestrator.trackNodeSubscription(node, s);
         }
     }
 
@@ -170,7 +170,7 @@ public final class AnnotationBinder {
     // @RunnableAction
     // ----------------------------------------------------------------------
 
-    private static void wireRunnableAction(OrchestratorImpl orch, Node node, Method m) {
+    private static void wireRunnableAction(OrchestratorImpl orchestrator, Node node, Method m) {
         RunnableAction ra = m.getAnnotation(RunnableAction.class);
         if (ra == null) return;
         if (m.getParameterCount() != 0) {
@@ -186,8 +186,8 @@ public final class AnnotationBinder {
                     "@RunnableAction method must not be static: " + m);
         }
         m.setAccessible(true);
-        orch.registerAction(node, ra.value(), m);
-        orch.trackNodeAction(node, ra.value());
+        orchestrator.registerAction(node, ra.value(), m);
+        orchestrator.trackNodeAction(node, ra.value());
     }
 
     // ----------------------------------------------------------------------

@@ -29,11 +29,11 @@ import java.util.Set;
  *
  * <p>Usage:
  * <pre>{@code
- * GamepadAdaptor.attach(orch, gamepad1, "gamepad1");
+ * GamepadAdaptor.attach(orchestrator, gamepad1, "gamepad1");
  *
  * // Anywhere:
- * orch.subscribe("gamepad1/right_bumper/rising", Boolean.class, _ -> {
- *     orch.publish("intake/set/power", 1.0);
+ * orchestrator.subscribe("gamepad1/right_bumper/rising", Boolean.class, _ -> {
+ *     orchestrator.publish("intake/set/power", 1.0);
  * });
  * }</pre>
  */
@@ -49,8 +49,8 @@ public final class GamepadAdaptor extends Node {
     private final boolean[] lastButton;
     private final boolean gamepadResolved;
 
-    private GamepadAdaptor(Orchestrator orch, Object gamepad, String parentTopic) {
-        super(orch);
+    private GamepadAdaptor(Orchestrator orchestrator, Object gamepad, String parentTopic) {
+        super(orchestrator);
         this.gamepad = gamepad;
         this.parentTopic = parentTopic;
         this.gamepadResolved = (gamepad != null);
@@ -74,12 +74,12 @@ public final class GamepadAdaptor extends Node {
 
         // Pre-create the topics so consumers can subscribe before the first tick.
         for (Field f : buttonFields) {
-            orch.getOrCreateTopic(topic(f.getName()), Boolean.class);
-            orch.getOrCreateTopic(topic(f.getName() + "/rising"), Boolean.class);
-            orch.getOrCreateTopic(topic(f.getName() + "/falling"), Boolean.class);
+            orchestrator.getOrCreateTopic(topic(f.getName()), Boolean.class);
+            orchestrator.getOrCreateTopic(topic(f.getName() + "/rising"), Boolean.class);
+            orchestrator.getOrCreateTopic(topic(f.getName() + "/falling"), Boolean.class);
         }
         for (Field f : axisFields) {
-            orch.getOrCreateTopic(topic(f.getName()), Float.class);
+            orchestrator.getOrCreateTopic(topic(f.getName()), Float.class);
         }
     }
 
@@ -91,10 +91,10 @@ public final class GamepadAdaptor extends Node {
      * Attach an adaptor that polls {@code gamepad} and dispatches its state onto
      * {@code parentTopic}. Returns the registered node name.
      */
-    public static String attach(Orchestrator orch, Object gamepad, String parentTopic) {
+    public static String attach(Orchestrator orchestrator, Object gamepad, String parentTopic) {
         String name = "GamepadAdaptor:" + parentTopic;
-        GamepadAdaptor adaptor = new GamepadAdaptor(orch, gamepad, parentTopic);
-        orch.registerNode(name, adaptor);
+        GamepadAdaptor adaptor = new GamepadAdaptor(orchestrator, gamepad, parentTopic);
+        orchestrator.registerNode(name, adaptor);
         return name;
     }
 

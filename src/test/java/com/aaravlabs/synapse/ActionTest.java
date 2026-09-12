@@ -12,10 +12,10 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class ActionTest {
 
-    private Orchestrator orch;
+    private Orchestrator orchestrator;
 
-    @BeforeEach void setUp() { orch = Orchestrator.create("test"); }
-    @AfterEach  void tearDown() { orch.close(); }
+    @BeforeEach void setUp() { orchestrator = Orchestrator.create("test"); }
+    @AfterEach  void tearDown() { orchestrator.close(); }
 
     static class ActionNode extends Node {
         final AtomicInteger calls = new AtomicInteger();
@@ -32,24 +32,24 @@ class ActionTest {
 
     @Test
     void runAction_completesFuture() throws Exception {
-        ActionNode n = new ActionNode(orch);
-        orch.registerNode("a", n);
+        ActionNode n = new ActionNode(orchestrator);
+        orchestrator.registerNode("a", n);
 
-        CompletableFuture<Void> f = orch.runAction("fire");
+        CompletableFuture<Void> f = orchestrator.runAction("fire");
         f.get(1, java.util.concurrent.TimeUnit.SECONDS);
         assertEquals(1, n.calls.get());
     }
 
     @Test
     void runAction_unknownName_failsFast() {
-        CompletableFuture<Void> f = orch.runAction("nope");
+        CompletableFuture<Void> f = orchestrator.runAction("nope");
         assertTrue(f.isCompletedExceptionally());
     }
 
     @Test
     void runAction_rejectsMethodsWithReturnType() {
-        BadActionNode n = new BadActionNode(orch);
+        BadActionNode n = new BadActionNode(orchestrator);
         assertThrows(IllegalArgumentException.class,
-                () -> orch.registerNode("a", n));
+                () -> orchestrator.registerNode("a", n));
     }
 }

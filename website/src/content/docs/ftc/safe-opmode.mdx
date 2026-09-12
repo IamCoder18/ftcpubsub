@@ -15,7 +15,7 @@ public class Demo extends SafeOpMode {
 }
 ```
 
-`SafeOpMode` extends `OpMode` and wires three things for you (`SafeOpMode.java:42-66`):
+`SafeOpMode` extends `OpMode` and wires three things for you (`SafeOpMode.java:42-76`):
 
 - `orchestrator` — the bus.
 - `hardware` — a `HardwareActions` facade.
@@ -29,4 +29,4 @@ It also enforces that `loop()` never runs on the hardware thread (`hardware.asse
 - `onSafeInitLoop()` — between init and start.
 - `onSafeLoop()` — every iteration after start.
 - `onSafeStart()` — when start fires.
-- `onSafeStop()` — before `orch.close()`.
+- `onSafeStop()` — before `orchestrator.close()`.

@@ -5,12 +5,12 @@ description: Independent units of code with annotated callbacks.
 
 # Nodes
 
-A `Node` is the home for `@SubscribedTo`, `@RunPeriodically`, and `@RunnableAction` methods. Subclass `Node` and pass the orchestrator to `super(orch)`:
+A `Node` is the home for `@SubscribedTo`, `@RunPeriodically`, and `@RunnableAction` methods. Subclass `Node` and pass the orchestrator to `super(orchestrator)`:
 
 ```java
 public class IntakeNode extends Node {
-    public IntakeNode(Orchestrator orch) {
-        super(orch);
+    public IntakeNode(Orchestrator orchestrator) {
+        super(orchestrator);
     }
 
     @SubscribedTo(topic = "intake/set/power")

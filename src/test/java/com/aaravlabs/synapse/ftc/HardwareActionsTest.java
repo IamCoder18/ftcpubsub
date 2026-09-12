@@ -17,11 +17,11 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class HardwareActionsTest {
 
-    private Orchestrator orch;
+    private Orchestrator orchestrator;
     private HardwareActions hw;
 
-    @BeforeEach void setUp() { orch = Orchestrator.create("test"); hw = orch.hardware(); }
-    @AfterEach  void tearDown() { orch.close(); }
+    @BeforeEach void setUp() { orchestrator = Orchestrator.create("test"); hw = orchestrator.hardware(); }
+    @AfterEach  void tearDown() { orchestrator.close(); }
 
     @Test
     void run_runsOnHardwareThread() throws Exception {
@@ -116,7 +116,7 @@ class HardwareActionsTest {
         });
         try {
             // Subscribe and wait for at least 3 publishes (~60ms).
-            orch.subscribe("bulk/tick", Integer.class, publishedValues::add);
+            orchestrator.subscribe("bulk/tick", Integer.class, publishedValues::add);
             Thread.sleep(300);
             assertTrue(publishedValues.size() >= 3,
                     "bulk-read should produce at least 3 ticks; got " + publishedValues.size());
