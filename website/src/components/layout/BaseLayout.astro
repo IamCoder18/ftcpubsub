@@ -22,7 +22,7 @@ const ogImagePath = ogImage;
 const ldArray = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
 ---
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -52,15 +52,15 @@ const ldArray = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
     })()}
     <!-- Fonts ship via @fontsource-variable imports in redesign.css -->
 
-    <!-- FOUC-free theme boot: read localStorage before paint -->
-    <script is:inline>
+    <!-- FOUC-free theme boot: read localStorage before paint and on every View Transitions navigation -->
+    <script is:inline data-astro-rerun>
       (function () {
         try {
           var stored = localStorage.getItem('synapse-theme');
-          var theme = stored === 'light' ? 'light' : 'dark';
+          var theme = stored === 'dark' || stored === 'light' ? stored : 'light';
           document.documentElement.setAttribute('data-theme', theme);
         } catch (_) {
-          document.documentElement.setAttribute('data-theme', 'dark');
+          document.documentElement.setAttribute('data-theme', 'light');
         }
       })();
     </script>

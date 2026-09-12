@@ -36,13 +36,15 @@
 </style>
 
 <script>
-  const btn = document.getElementById('syn-theme-toggle');
-  if (btn) {
+  function bindThemeToggle() {
+    const btn = document.getElementById('syn-theme-toggle');
+    if (!btn) return;
     btn.addEventListener('click', () => {
-      const current = document.documentElement.getAttribute('data-theme') ?? 'dark';
+      const current = document.documentElement.getAttribute('data-theme') ?? 'light';
       const next = current === 'dark' ? 'light' : 'dark';
       document.documentElement.setAttribute('data-theme', next);
       try { localStorage.setItem('synapse-theme', next); } catch (_) {}
     });
   }
+  document.addEventListener('astro:page-load', bindThemeToggle);
 </script>
