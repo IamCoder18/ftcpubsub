@@ -5,9 +5,19 @@ description: Add Synapse to your FTC Gradle project in three steps.
 
 # Install
 
-Synapse is distributed as a Maven artifact, `com.aaravlabs:synapse:0.3.1`, hosted on **GitHub Packages**. Because GitHub Packages requires authentication even for public packages, you need a GitHub token with the `read:packages` scope before Gradle can resolve the dependency.
+Synapse is distributed as a Maven artifact, `com.aaravlabs:synapse:0.4.0`, published to **Maven Central**. Maven Central needs no authentication — if your project already has `mavenCentral()` in its repositories (the FTC template does), you can add the dependency and you're done:
 
-> **Maven Central?** Publishing to Maven Central is planned for the next release. Until then, GitHub Packages is the only source.
+```groovy
+dependencies {
+    implementation 'com.aaravlabs:synapse:0.4.0'
+}
+```
+
+> **GitHub Packages?** Synapse is also mirrored on GitHub Packages at
+> `maven.pkg.github.com/IamCoder18/synapse`. That mirror requires a GitHub
+> token with the `read:packages` scope even for public packages — a GitHub
+> restriction, not a Synapse one. The rest of this page walks through that
+> setup, useful if your team already authenticates against GitHub.
 
 ## Prerequisites
 
@@ -48,7 +58,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.aaravlabs:synapse:0.3.1'
+    implementation 'com.aaravlabs:synapse:0.4.0'
 }
 ```
 
@@ -71,7 +81,7 @@ repositories {
 }
 
 dependencies {
-    implementation("com.aaravlabs:synapse:0.3.1")
+    implementation("com.aaravlabs:synapse:0.4.0")
 }
 ```
 
@@ -85,7 +95,7 @@ Sync Gradle (the `Sync Now` banner, or the Gradle elephant in Android Studio), t
 ./gradlew dependencies --configuration debugRuntimeClasspath | grep synapse
 ```
 
-You should see `com.aaravlabs:synapse:0.3.1` in the output.
+You should see `com.aaravlabs:synapse:0.4.0` in the output.
 
 > **Sync fails with 401 Unauthorized?**
 > 1. Check that `githubUser` and `githubToken` are spelled exactly like that in `~/.gradle/gradle.properties`.

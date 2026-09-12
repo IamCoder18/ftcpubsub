@@ -222,4 +222,4 @@ com.aaravlabs.synapse.ftc
   HardwareView       publish(topic, value) / getLatestValue(topic, type)
 ```
 
-Version note: docs pin `0.3.1` only on the Install page; everywhere else say "the latest release" and link https://github.com/IamCoder18/synapse/releases.
+Version note: docs pin the current release (e.g. `0.4.0`) only on the Install page; everywhere else say "the latest release" and link https://github.com/IamCoder18/synapse/releases.

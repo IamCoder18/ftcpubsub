@@ -1,4 +1,4 @@
-# Synapse API surface (v0.3.1)
+# Synapse API surface (v0.4.0)
 
 Exact public surface. Anything not listed (notably `com.aaravlabs.synapse.internal.*`) is internal and may change without notice.
 

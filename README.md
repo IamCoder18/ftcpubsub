@@ -263,10 +263,10 @@ subscribers, loops, and actions are logged and never crash the OpMode.
 
 ## Installation
 
-Synapse is hosted on **GitHub Packages**, which requires authentication for
-downloads even though the package is public. A token with the `read:packages`
-scope is all you need. (Maven Central publishing is planned for the next
-release; until then GitHub Packages is the only source.)
+Synapse is published to **Maven Central**, which needs no authentication —
+just add the dependency. It is also mirrored on **GitHub Packages** (that
+mirror requires a GitHub token with the `read:packages` scope, useful if your
+organization already authenticates against GitHub).
 
 Add this to `build.dependencies.gradle` in your FTC project:
 
@@ -284,7 +284,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.aaravlabs:synapse:0.3.1'
+    implementation 'com.aaravlabs:synapse:0.4.0'
     // ... your other FTC deps
 }
 ```
