@@ -60,9 +60,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to Maven Central
-        # Uploads to the Sonatype Central staging API (OSSRH was sunset
-        # 2025-06-30), then closes & releases so artifacts sync to Maven Central.
-        run: gradle --no-daemon publishToSonatype closeAndReleaseSonatypeStagingRepository
+        # Uploads via the Central Portal publisher API (com.gradleup.nmcp)
+        # and auto-releases after validation, so artifacts sync to Maven
+        # Central. The legacy OSSRH staging API shim stopped accepting
+        # deployments in 2026.
+        run: gradle --no-daemon publishAggregationToCentralPortal
         env:
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}

@@ -66,7 +66,10 @@ Releases are tagged versions. To cut a release:
 3. Commit on `main`.
 4. Tag: `git tag vX.Y.Z`.
 5. Push: `git push origin main --tags`.
-6. Publish: `GITHUB_USER=... GITHUB_TOKEN=... ./gradlew publishMavenPublicationToGitHubPackagesRepository`.
+6. Publish: automatic. The tag push triggers the `Publish` workflow, which
+   re-runs the tests, publishes to GitHub Packages, and publishes to Maven
+   Central (Central Portal API, auto-release) via
+   `gradle publishAggregationToCentralPortal`.
 
 ## Reporting issues
 
