@@ -1,0 +1,15 @@
+name: Startup test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    name: Ping
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo
+        run: echo "startup ok"
