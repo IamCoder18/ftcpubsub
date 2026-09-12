@@ -8,7 +8,7 @@ description: The bus that owns topics, nodes, and thread pools.
 The `Orchestrator` is the bus. One per robot. Create it in your `SafeOpMode` (or manually in tests):
 
 ```java
-// Note: the variable name intentionally shadows the type — the canonical
+// Note: the variable name intentionally mirrors the type name in lowercase — the canonical
 // binding name is `orchestrator` throughout the codebase.
 Orchestrator orchestrator = Orchestrator.create("main");
 HardwareActions hardware = orchestrator.hardware();

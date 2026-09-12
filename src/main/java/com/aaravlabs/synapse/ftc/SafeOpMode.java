@@ -55,6 +55,7 @@ public abstract class SafeOpMode extends OpMode {
     protected SafeHardwareMap safeMap;
 
     @Override
+    @SuppressWarnings("deprecation")
     public final void init() {
         orchestrator = FtcOrchestrator.create();
         orch = orchestrator;
