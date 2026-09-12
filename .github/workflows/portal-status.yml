@@ -15,7 +15,7 @@ jobs:
     name: Check deployment status
     runs-on: ubuntu-latest
     steps:
-      - name: Query Central Portal status
+      - name: POST status endpoint
         run: |
           AUTH=$(printf '%s' "${SONATYPE_USERNAME}:${SONATYPE_PASSWORD}" | base64)
           curl -s -X POST \
@@ -23,6 +23,14 @@ jobs:
             -H "Content-Type: application/json" \
             -d "{\"id\": \"${{ inputs.deployment_id }}\"}" \
             "https://central.sonatype.com/api/v1/publisher/status"
+          echo
+      - name: POST deployment endpoint
+        run: |
+          AUTH=$(printf '%s' "${SONATYPE_USERNAME}:${SONATYPE_PASSWORD}" | base64)
+          curl -s -X POST \
+            -H "Authorization: Bearer $AUTH" \
+            -H "Content-Type: application/json" \
+            "https://central.sonatype.com/api/v1/publisher/deployment/${{ inputs.deployment_id }}"
           echo
         env:
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
