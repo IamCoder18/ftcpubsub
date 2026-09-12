@@ -46,6 +46,5 @@
       try { localStorage.setItem('synapse-theme', next); } catch (_) {}
     });
   }
-  bindThemeToggle();
   document.addEventListener('astro:page-load', bindThemeToggle);
 </script>
