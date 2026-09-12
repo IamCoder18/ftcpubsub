@@ -15,10 +15,17 @@ jobs:
     name: Check deployment status
     runs-on: ubuntu-latest
     steps:
-      - name: Query Central Portal
+      - name: Query Central Portal (Bearer)
         run: |
           AUTH=$(printf '%s' "${SONATYPE_USERNAME}:${SONATYPE_PASSWORD}" | base64)
+          echo "bearer:"
           curl -s -H "Authorization: Bearer $AUTH" \
+            "https://central.sonatype.com/api/v1/publisher/status?id=${{ inputs.deployment_id }}"
+          echo
+      - name: Query Central Portal (Basic)
+        run: |
+          echo "basic:"
+          curl -s -u "${SONATYPE_USERNAME}:${SONATYPE_PASSWORD}" \
             "https://central.sonatype.com/api/v1/publisher/status?id=${{ inputs.deployment_id }}"
           echo
         env:
