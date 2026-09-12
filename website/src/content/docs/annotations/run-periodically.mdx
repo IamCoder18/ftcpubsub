@@ -5,17 +5,54 @@ description: Run a method on a fixed-rate loop.
 
 # @RunPeriodically
 
+`@RunPeriodically` runs a `Node` method on a fixed-rate loop. Use it for continuous work: driving, PID control, publishing state.
+
 ```java
 @RunPeriodically(hz = 50)
-public void update() { /* … */ }
+public void update() { /* math, state machines — no hardware */ }
 
 @RunPeriodically(hz = 50, hardware = true)
-public void updatePID() { /* … */ }
+public void drive() { /* touches motors — runs on the hardware thread */ }
 ```
 
-- `hz` — target frequency (default 20). The actual rate is `1000 / hz` ms between method *completions*, so a slow loop never overlaps itself.
-- `hardware = true` — route the loop to the single hardware thread instead of the scheduler pool. Use this for any loop that reads or writes FTC hardware.
+## Attributes
 
-The method must take no parameters and return `void`. The annotation is `@Repeatable`.
+| Attribute | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `hz` | `int` | `20` | target frequency in hertz. Must be `> 0`; an invalid value logs a warning and skips the loop. |
+| `hardware` | `boolean` | `false` | when `true`, the loop runs on the single dedicated hardware thread instead of the scheduler pool. |
 
-See `RunPeriodically.java:38-51` for the attribute definitions and `OrchestratorImpl.java:76` for the scheduler pool.
+## Method signature rules
+
+- **No parameters.** Pull inputs with `getLatestValue` inside the body.
+- **Not static.** The binder invokes it reflectively on the node instance.
+- The annotation is **repeatable** — one method may run at multiple rates (rare, but valid).
+
+## Timing semantics
+
+Scheduling is **fixed-delay**: the next invocation starts `1000 / hz` milliseconds after the previous one *finishes*.
+
+- A slow loop never overlaps itself.
+- The **effective rate is `hz` or lower** — a 20 ms body at `hz = 50` actually runs ~25 Hz.
+- The first invocation happens immediately at registration.
+- All non-hardware loops share the 8-thread scheduler pool, so a blocked loop can delay others scheduled at the same moment; hardware loops are isolated on the hardware thread.
+
+```java
+@RunPeriodically(hz = 20, hardware = true)
+public void drive() {
+    double y = -orchestrator.getLatestValue("g1/left_stick_y", Float.class)
+                             .map(Float::doubleValue).orElse(0.0);
+    left.run(m -> m.setPower(y));
+}
+```
+
+## Error behavior
+
+An exception in the body is logged and the loop keeps running — a single throw does not kill the schedule.
+
+> **Choose `hardware = true` for anything that reads or writes devices.** A loop that forgets the flag runs on the scheduler pool, where every hardware call is a rule violation — and `SafeDevice` calls made from there enqueue onto the hardware thread with extra latency. The flag costs nothing and prevents both.
+
+## Next steps
+
+- [Architecture](/docs/concepts/architecture) — where the loop actually runs and why it can't overlap itself.
+- [`@SubscribedTo`](/docs/annotations/subscribed-to) — the reactive alternative.

@@ -1,27 +1,47 @@
 ---
 title: "@OnHardwareThread"
-description: Force a subscriber onto the single hardware thread.
+description: Re-route a subscriber onto the single dedicated hardware thread.
 ---
 
 # @OnHardwareThread
 
+`@OnHardwareThread` marks a `@SubscribedTo` method as hardware-touching. The binder re-routes the handler to the orchestrator's single dedicated hardware thread, where it executes strictly serially with every other piece of hardware work.
+
 ```java
 @SubscribedTo(topic = "intake/set/power")
 @OnHardwareThread
-public void setPower(double power) {
-    motor.setPower(power);
+public void onTarget(double power) {
+    intake.run(m -> m.setPower(power));
 }
 ```
 
-Every `@OnHardwareThread` callback shares the same single OS thread and runs strictly serially with respect to every other piece of hardware-thread work in the orchestrator. See `OrchestratorImpl.java:93-94`.
+## Attributes
 
-## Why a dedicated thread?
+None. It is a pure marker, and it only affects methods that also carry `@SubscribedTo`.
 
-FTC hardware is not thread-safe. The Lynx bus, `DcMotorEx`, servos, the IMU, and I²C sensors all misbehave when called concurrently from two threads. Synapse funnels every hardware-touching callback through one thread so this race simply cannot happen.
+## Why a dedicated thread
 
-## What it does NOT do
+FTC hardware is not thread-safe. The Lynx bus, `DcMotorEx`, servos, the IMU, and I²C sensors all misbehave when driven from two threads — race conditions, garbled serial responses, `ConcurrentModificationException` crashes deep in the SDK. The orchestrator owns exactly one thread for hardware, and `@OnHardwareThread` is how a callback opts into it.
 
-- It does not intercept ad-hoc hardware calls in code that isn't annotated.
-- It does not protect against the OpMode `loop()` calling hardware directly. Move that work into a `Node` with this annotation (or use `SafeDevice`).
+The same thread serves:
 
-See `OnHardwareThread.java:62-75` for the full caveats.
+- `@OnHardwareThread` subscribers,
+- `@RunPeriodically(hardware = true)` loops,
+- `HardwareActions.run/call/callAsync/bulkRead` submissions.
+
+Work on it is strictly serial — no locks are needed anywhere in user code.
+
+## What it does not do
+
+- It does **not** intercept hardware calls made from unannotated code. A raw `motor.setPower(...)` inside a plain `@SubscribedTo` method still runs on the callback pool.
+- It does **not** protect `onSafeLoop()`. `SafeOpMode.loop()` asserts *its own* thread; if your OpMode loop touches hardware directly, that touch happens off-thread. Move it into a node, or use `SafeDevice.run(...)` from the loop.
+- It does **not** apply to `@RunnableAction` methods — actions always run on the action pool.
+
+## The deadlock rule
+
+> **Never block waiting for the hardware thread while on it.** Calling `hardware.call(...)` or `device.call(...)` inside an `@OnHardwareThread` subscriber, a `hardware = true` loop, or a bulk-read reader hangs the robot: the one thread is waiting for a task it cannot start. Code already on the hardware thread should use `device.raw()` and touch the device directly.
+
+## Next steps
+
+- [HardwareActions](/docs/ftc/hardware-actions) — routing hardware work from anywhere else.
+- [Architecture](/docs/concepts/architecture) — the full threading picture.

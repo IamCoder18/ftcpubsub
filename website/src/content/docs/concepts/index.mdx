@@ -1,11 +1,14 @@
 ---
 title: Concepts
-description: Orchestrator, topics, nodes, subscriptions — the building blocks.
+description: The building blocks — architecture, orchestrator, topics, nodes, subscriptions.
 ---
 
 # Concepts
 
-- **[Orchestrator](/docs/concepts/orchestrator)** — The bus. Owns topics, nodes, and the three thread pools.
-- **[Topics](/docs/concepts/topics)** — Named, typed channels. The unit of communication.
-- **[Nodes](/docs/concepts/nodes)** — Independent units of code that subscribe, publish, or run periodic work.
-- **[Subscriptions](/docs/concepts/subscriptions)** — How a node receives values, in three styles.
+Four pages explain the model. If you read only one, read **[Architecture](/docs/concepts/architecture)** — the threading model is what makes Synapse different from every other FTC framework.
+
+- **[Architecture](/docs/concepts/architecture)** — the four thread workers, what runs where, and the one rule that keeps your hardware alive.
+- **[Orchestrator](/docs/concepts/orchestrator)** — the bus. Owns topics, nodes, and every thread worker. One per robot.
+- **[Topics](/docs/concepts/topics)** — named, typed channels. The unit of communication.
+- **[Nodes](/docs/concepts/nodes)** — independent units of robot logic with annotated callbacks.
+- **[Subscriptions](/docs/concepts/subscriptions)** — three ways to consume values, and when each fits.

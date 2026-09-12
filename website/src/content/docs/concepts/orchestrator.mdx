@@ -1,34 +1,61 @@
 ---
 title: Orchestrator
-description: The bus that owns topics, nodes, and thread pools.
+description: The bus that owns topics, nodes, and the thread workers.
 ---
 
 # Orchestrator
 
-The `Orchestrator` is the bus. One per robot. Create it in your `SafeOpMode` (or manually in tests):
+The `Orchestrator` is the pub/sub bus. There is exactly **one per robot** — it owns the topic registry, the node registry, the action registry, and all four thread workers. You almost never construct one yourself: `SafeOpMode.init()` creates it as the `orchestrator` field before `onSafeInit()` runs.
 
 ```java
-Orchestrator orch = Orchestrator.create("main");
-HardwareActions hardware = orch.hardware();
+@Override
+protected void onSafeInit() {
+    // orchestrator, hardware, and safeMap are ready here.
+    orchestrator.publish("robot/init", true);
+}
 ```
 
-On the FTC side, `FtcOrchestrator.create()` is the equivalent factory and wires `android.util.Log` into a `LogSink` (`SafeOpMode.java:49-54`).
+Outside an OpMode (unit tests, for example), create one directly:
 
-## Thread pools
+```java
+Orchestrator orch = Orchestrator.create("test");
+HardwareActions hw = orch.hardware();
+// ... use it ...
+orch.close();
+```
 
-The orchestrator owns three pools plus a dedicated single-thread hardware executor:
+`FtcOrchestrator.create()` is the FTC-side factory: same bus, but named `"ftc"` and logging to `android.util.Log` instead of stderr.
 
-| Pool          | Threads        | Used for                                  |
-| ------------- | -------------- | ----------------------------------------- |
-| Scheduler     | 8              | `@RunPeriodically` loops                  |
-| Callback      | 4–16 (q=256)   | `@SubscribedTo` handlers                  |
-| Action        | unbounded      | `@RunnableAction` invocations             |
-| Hardware      | 1 (dedicated)  | All hardware reads/writes                 |
+## What it does
 
-See `OrchestratorImpl.java:55-94` and `README.md` (Threading model section).
+| Group | Methods | Notes |
+| --- | --- | --- |
+| Topics | `getOrCreateTopic(name, type)`, `findTopic(name)`, `findTopic(name, type)` | Topics are created lazily; see [Topics](/docs/concepts/topics). |
+| Publish | `publish(name, value)` | Non-blocking. Updates the latest-value cache, then dispatches to subscribers. |
+| Subscribe | `subscribe(name, type, handler)` | Handler runs on the callback pool. Returns a `Subscription` handle. |
+| Read | `getLatestValue(name, type)` | `Optional` of the most recent value; empty if none or type-incompatible. |
+| Nodes | `registerNode(name, node)`, `unregisterNode(name)`, `findNode(name)` | Registration binds all annotations on the node. |
+| Actions | `runAction(name)`, `cancelAllActions()` | See [`@RunnableAction`](/docs/annotations/runnable-action). |
+| Scheduling | `runPeriodically(task, hz)` | The programmatic form of `@RunPeriodically` (non-hardware). |
+| Hardware | `runOnHardwareThread(task)`, `hardware()` | Direct submission, or the `HardwareActions` facade. |
+| Logging | `log`, `warn`, `error` | Routed through the configured `LogSink`. |
+
+## Naming things
+
+Both topic names and node names are plain strings. Two conventions used throughout the recipes:
+
+- **Topics** are slash-separated paths rooted by their source: `g1/left_stick_y`, `drive/power/fl`, `intake/power`. Producers own the first segment; consumers subscribe to the full path.
+- **Node names** identify the subsystem: `"drive"`, `"intake"`, `"shooter"`. Names are unique — registering a second node under an existing name is a no-op that logs a warning and returns the original node. If a subsystem silently does nothing, grep for a duplicate `registerNode` call.
 
 ## Lifecycle
 
-1. `Orchestrator.create(...)` (or `FtcOrchestrator.create()`) — make the bus.
-2. `orch.registerNode(name, node)` — bind annotations on a node.
-3. `orch.close()` — shut down every pool and unbind every node. `SafeOpMode.stop()` does this for you (`SafeOpMode.java:74-77`).
+```java
+orchestrator.close();   // SafeOpMode.stop() does this for you
+```
+
+`close()` is idempotent. It unregisters every node (calling each node's `close()` hook), cancels all scheduled loops and actions, and shuts down all four workers. After close, publishes are ignored (with a warning) and `runAction` returns a failed future.
+
+## Next steps
+
+- [Topics](/docs/concepts/topics) — the channels flowing through this bus.
+- [Nodes](/docs/concepts/nodes) — what registerNode actually binds.

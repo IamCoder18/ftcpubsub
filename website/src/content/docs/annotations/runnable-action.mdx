@@ -5,17 +5,59 @@ description: Register a named, fire-on-demand method.
 
 # @RunnableAction
 
-```java
-@RunnableAction("fire")
-public void fire() { /* … */ }
-```
-
-Then fire it from anywhere:
+`@RunnableAction` registers a method under a name. Any code with access to the orchestrator can fire it by name — from a subscriber, a periodic loop, or `onSafeLoop`.
 
 ```java
-orchestrator.runAction("fire");           // returns CompletableFuture<Void>
+@RunnableAction("launch")
+public void launch() {
+    orchestrator.publish("shooter/set/speed", 4800.0);
+}
 ```
 
-The action runs on a thread pool with `Integer.MAX_VALUE` as its ceiling. Submissions are rejected after `orchestrator.close()`, after `cancelAllActions()`, or once the pool's transient high-water mark is reached (the default `AbortPolicy` surfaces a `RejectedExecutionException`). If you need to guarantee delivery under any load, wrap the call in your own retry or queueing layer.
+Fire it:
 
-The method must take no parameters and return `void`. See `RunnableAction.java:27-31`.
+```java
+CompletableFuture<Void> done = orchestrator.runAction("launch");
+```
+
+## Attributes
+
+| Attribute | Type | Required | Meaning |
+| --- | --- | --- | --- |
+| `value` | `String` | yes | the action name, e.g. `@RunnableAction("launch")`. |
+
+## Method signature rules
+
+- **No parameters.** Actions take input through topics, not arguments.
+- **Returns `void`.**
+- **Not static.**
+- **Not repeatable** — one method, one name.
+
+## Runtime behavior
+
+- Fired by `orchestrator.runAction(name)`, which returns a `CompletableFuture<Void>` that completes when the method returns normally — chain with `.thenRun(...)` if you care about completion.
+- Runs on a dedicated, unbounded action pool, separate from the callback and scheduler pools, so a long action never blocks the bus.
+- The action pool is **not the hardware thread**. An action that touches hardware must route the touch through `hardware.run(...)` / `device.run(...)`.
+
+## Error behavior
+
+`runAction` completes exceptionally when:
+
+- no action with that name is registered (`IllegalArgumentException`),
+- the orchestrator is closed,
+- or the action itself throws (the original exception is preserved on the future).
+
+If the returned future is ignored, the failure is only visible in logs.
+
+## Gotchas
+
+> **Action names are global.** Two nodes registering `"fire"` keep only the first; the second logs a warning and is skipped. Prefix action names with the subsystem: `"shooter/launch"`.
+
+> **`cancelAllActions()` is permanent.** It shuts the action pool down for the rest of the OpMode — every later `runAction` completes exceptionally. Do not call it mid-OpMode expecting to re-enable actions.
+
+> **Avoid long sleeps.** An action that sleeps for a second occupies its pool thread for a second. That's fine — the pool is unbounded — but prefer splitting long sequences into state published to topics, so other code can observe progress.
+
+## Next steps
+
+- [`@SubscribedTo`](/docs/annotations/subscribed-to) — the event-driven form; most button presses become subscriptions, not actions.
+- [Architecture](/docs/concepts/architecture) — which pool runs what.

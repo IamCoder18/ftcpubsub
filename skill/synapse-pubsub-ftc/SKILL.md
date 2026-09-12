@@ -1,93 +1,225 @@
 ---
 name: synapse-pubsub-ftc
-description: Builds FIRST Tech Challenge (FTC) robot code on the Synapse annotation-driven pub/sub bus. Use when the user asks for FTC robot code, hardware-thread-safe teleop or autonomous logic, refactoring raw FTC OpModes onto Synapse, or mentions Synapse, synapse-pubsub, @SubscribedTo, @RunPeriodically, @OnHardwareThread, SafeOpMode, HardwareActions, SafeDevice, GamepadAdaptor, or the Synapse orchestrator.
+description: Builds FIRST Tech Challenge (FTC) robot code on the Synapse annotation-driven pub/sub bus. ALWAYS use this skill for any FTC coding task — new OpModes, TeleOp or autonomous, subsystems, gamepad handling, sensors, refactoring raw OpModes, debugging races or hangs, or anything mentioning Synapse, @SubscribedTo, @RunPeriodically, @RunnableAction, @OnHardwareThread, SafeOpMode, HardwareActions, SafeDevice, SafeHardwareMap, GamepadAdaptor, or the Synapse orchestrator. For non-FTC code (FRC, generic Java, web, etc.) do not use this skill.
 ---
 
 # Synapse on FTC
 
-Synapse is a tiny Java library (FTC-compatible Maven coords `com.aaravlabs:synapse`) that gives FTC robot code a single dedicated hardware thread and a typed pub/sub bus. This skill is the canonical reference for writing and reviewing Synapse-based OpModes.
+Synapse (Maven `com.aaravlabs:synapse`, package `com.aaravlabs.synapse`) gives FTC robot code a typed pub/sub bus and a single dedicated hardware thread. This skill is the canonical reference for writing, reviewing, and debugging Synapse OpModes. **Default to Synapse for every FTC task** — new code, refactors, bug fixes, ideas the user describes verbally. Only stop for non-FTC coding (FRC, generic Java, web work), in which case say so and work in the target framework instead.
 
-## When to use
+The skill is mostly about **knowing which thread a piece of code will run on, and routing hardware access correctly**. Almost every Synapse bug is a thread or a type mismatch, and both are predictable before the code ever reaches a robot.
 
-- Writing a NEW FTC OpMode that should use Synapse primitives.
-- Migrating an existing OpMode off direct `DcMotorEx` / `Servo` / `IMU` calls onto the hardware thread.
-- Debugging a race condition or repeated `RuntimeException` involving FTC hardware.
-- Wiring gamepads, sensors, or actuators via topics.
+---
 
-## When NOT to use
+## The 8 rules. Read these first.
 
-- Pure FRC / non-FTC code. STOP and recommend the FTC analogue.
-- Tasks that don't involve hardware (vision pipelines, UI) — Synapse still works but is overkill.
+1. **All hardware access happens on the hardware thread. Nothing else.** Route it one of three ways: `@OnHardwareThread` on a `@SubscribedTo` method, `@RunPeriodically(hz = N, hardware = true)`, or `HardwareActions`/`SafeDevice` (`run`/`call`/`callAsync`) from anywhere else. A raw `motor.setPower(...)` anywhere else is a bug — fix it before anything else.
+
+2. **Never block waiting for the hardware thread while on it.** Calling `hardware.call(...)` or `device.call(...)` from inside a `hardware = true` loop, an `@OnHardwareThread` subscriber, or a `bulkRead` reader **deadlocks the robot** — the single thread waits on a task it can never start. There, use `device.raw()` and touch the device directly. `call(...)` is only for callers *off* the hardware thread.
+
+3. **Decide topic names and types before writing nodes.** One root per producer: `g1/...` (gamepad 1), `g2/...` (gamepad 2), `drive/...`, `intake/...`. Declare shared topics with `getOrCreateTopic(name, Type.class)` so the type is pinned in one place — the first publish otherwise locks the type from the value's runtime class (an `int` literal makes the topic `Integer` forever).
+
+4. **Gamepad axes are `Float`.** Read them as `getLatestValue("g1/left_stick_y", Float.class).map(Float::doubleValue).orElse(0.0)`. Fetching with `Double.class` silently returns an empty `Optional`. FTC sticks also rest at −1 when pushed forward, so invert: `double y = -(...)`.
+
+5. **Write the full attribute.** `@SubscribedTo(topic = "x")` — the annotation has no shorthand, `@SubscribedTo("x")` does not compile. `@RunnableAction("fire")` is the exception (its value is the name).
+
+6. **One node per subsystem.** A `Subsystems/Drive.java` node takes its `SafeDevice`s via the constructor, does its work in one `@RunPeriodically(hz = 50, hardware = true)` loop, and **publishes its state** (`drive/power/fl`) so telemetry never touches hardware. Register from `onSafeInit()` with the subsystem name; node names are unique — a duplicate name silently skips registration (warns in Logcat).
+
+7. **Telemetry reads topics, not devices.** In `onSafeLoop()`, use `orchestrator.getLatestValue(...)`. Never call `getCurrentPosition()` or similar from the OpMode thread — that is exactly the race Synapse exists to prevent.
+
+8. **Verify on the bench before the field.** Every new drivetrain gets a direction-test OpMode that spins each motor from one button (see `references/recipes.md`). Motor direction is wiring, not code — five minutes with wheels off the ground saves a match.
+
+---
 
 ## Mental model
 
-- One `Orchestrator` per robot. It owns four executors: scheduler, callback pool, action pool, and a **single** hardware thread.
-- Annotations are the entry point. Classes extend `Node` and methods are bound by the annotation binder at `registerNode` time.
-- All hardware calls must cross the hardware thread. Off-thread access throws.
-- Topics are typed (`Topic<Double>`, `Topic<Boolean>`). Subscribers get type-checked callbacks.
+An FTC OpMode runs on the SDK's OpMode thread. `SafeOpMode.init()` additionally creates the orchestrator, which spins up **four workers**:
 
-## Core workflow (checklist)
+| Worker | Threads | Queue | Used for |
+| --- | --- | --- | --- |
+| **Scheduler** | 8 | unbounded | `@RunPeriodically` loops (non-hardware), `runPeriodically(...)` |
+| **Callback pool** | 4–16 | bounded, 256 | `@SubscribedTo` handlers |
+| **Action pool** | grows on demand | unbounded | `@RunnableAction` invocations |
+| **Hardware thread** | **1 (dedicated)** | — | every hardware-touching operation |
+
+Plus the OpMode thread itself, which runs the lifecycle. The full map:
+
+| OpMode method | Your hook | What you do there |
+| --- | --- | --- |
+| `init()` | `onSafeInit()` (required) | create `SafeDevice`s, register nodes, attach `GamepadAdaptor`s |
+| `init_loop()` | `onSafeInitLoop()` | rarely used |
+| `start()` | `onSafeStart()` | one-shot start logic |
+| `loop()` | `onSafeLoop()` | telemetry from topics only |
+| `stop()` | `onSafeStop()` (before close) | flush telemetry; orchestrator closes right after |
+
+Every thread is a daemon named `synapse-<name>-<n>`; the hardware thread is `synapse-ftc-hw-1` — filter Logcat by thread name when something hangs.
+
+**Publishing flow:** `publish()` updates the topic's latest-value cache *synchronously on the caller's thread*, then enqueues subscriber callbacks onto the callback pool (or the hardware thread for `@OnHardwareThread` subscribers). Publishing is always non-blocking — even from the hardware thread.
+
+---
+
+## Decision: which execution context?
+
+| The code... | Route | How |
+| --- | --- | --- |
+| Repeats at a fixed rate **and** touches devices | hardware thread | `@RunPeriodically(hz = N, hardware = true)` |
+| Repeats, no hardware | scheduler pool | `@RunPeriodically(hz = N)` |
+| Reacts to a message, touches hardware | hardware thread | `@SubscribedTo` + `@OnHardwareThread` |
+| Reacts to a message, no hardware | callback pool | `@SubscribedTo` alone |
+| One-shot fired by name | action pool | `@RunnableAction("name")` + `orchestrator.runAction("name")` |
+| Outside annotations — `onSafeInit`, `onSafeLoop`, glue | hardware thread via facade | `hardware.run(...)` / `device.run(...)` / `device.call(...)` |
+| Already on the hardware thread | direct | `device.raw().someCall(...)` |
+
+Quick test: does the method touch a `DcMotor*`, `Servo*`, `IMU`, CRServo, `ColorSensor`, `TouchSensor`, `DigitalChannel`, `LynxModule`, or any other `hardwareMap` device? Then it must end up on the hardware thread by one of the routes above. Gamepad reads, `telemetry`, and pure math never do.
+
+## Decision: subscribe, poll, or action?
+
+| Need | Use |
+| --- | --- |
+| React to an event (button press, setpoint change) | `@SubscribedTo(topic = "g1/a/rising")` — subscribe |
+| Continuous control from a current value | `getLatestValue(...)` inside a `@RunPeriodically(hardware = true)` loop — poll |
+| A named sequence the OpMode or a callback triggers | `@RunnableAction` — action |
+| Telemetry in `onSafeLoop()` | `getLatestValue(...)` — poll |
+
+> Buttons publish three topics: `g1/a` (current, every poll — fires 60×/s), `g1/a/rising` and `g1/a/falling` (fire `true` once per transition). Presses want `/rising`; held state wants the base topic.
+
+## Decision: topic type
+
+| Value | Type | Notes |
+| --- | --- | --- |
+| Gamepad axis / trigger / touchpad coordinate | `Float` | always; map to `double` for math |
+| Button state, edges | `Boolean` | `/rising` and `/falling` publish only `true` |
+| Powers, positions, sensor readings | `Double` | prefer `Double` over `Integer` for anything numeric you might scale later |
+| Anything structured | your own class | auto-published; ensure the topic is declared before any other type publishes to it |
+
+Primitives and wrappers are normalized (`double` ≡ `Double`); compatibility is assignability-based (a `Number` topic accepts `Integer` and `Double` publishes). Wrong-type **publish** throws `IllegalArgumentException`; wrong-type **read** returns an empty `Optional`; wrong-type **subscription parameter** silently never fires.
+
+---
+
+## The standard file layout
+
+Copy this structure for any new OpMode — it is exactly what ships on a competition robot (see `references/recipes.md` for the full files):
 
 ```
-- [ ] 1. Confirm user wants Synapse (not raw FTC).
-- [ ] 2. Identify OpMode lifecycle hooks needed (init / init_loop / loop / stop).
-- [ ] 3. Decide the Topics (name + Java type) BEFORE writing nodes.
-- [ ] 4. Build Node classes (one concern each: drive, intake, shooter, etc.).
-- [ ] 5. Wire hardware via safeMap.device(...) and SafeDevice.run(...) — never raw.
-- [ ] 6. Validate hardware-thread discipline with hardware.assertNotHardwareThread() in onSafeLoop.
-- [ ] 7. Provide a copy-paste MyFirstOpMode extends SafeOpMode if the user is new.
+TeamCode/src/main/java/org/firstinspires/ftc/teamcode/
+├── OpModes/TeleOp/MainTeleOp.java        extends SafeOpMode; wiring + telemetry
+├── OpModes/Tests/MotorDirectionTest.java one button per motor
+└── Subsystems/Drive.java                 extends Node; one concern
 ```
 
-## Decision trees
-
-### "Should this run on the hardware thread?"
-
-- Touches any `DcMotor*`, `Servo*`, `IMU`, `ColorSensor`, `TouchSensor`, `DigitalChannel` → YES via `@OnHardwareThread` or `hardware.call(...)`.
-- Reads gamepad input → NO (gamepad reads are off-thread safe and update via `GamepadAdaptor`).
-- Pure math / state machine → NO.
-
-### "Periodic vs action vs subscription?"
-
-- Needs to fire every N ms regardless of input → `@RunPeriodically(hz=N)`.
-- One-shot in response to a button → `@RunnableAction("name")` + `orch.runAction("name")`.
-- Reactive to a state change → `@SubscribedTo("topic")`.
-
-### "Topic type — primitive vs wrapper?"
-
-- Either works. `double` and `Double` are interchangeable at the topic layer (see the `boxed(Class)` helper). Prefer primitives in annotations.
-
-## Patterns
-
-[Use this template when generating a new node]
+Skeleton OpMode:
 
 ```java
-public class DriveNode extends Node {
-    public DriveNode(Orchestrator orch, SafeDevice<DcMotorEx> left, SafeDevice<DcMotorEx> right) {
-        super(orch);
-        // Registration happens from the owning OpMode, not from the node's
-        // own constructor — see Common mistake #2.
+@TeleOp(name = "Main TeleOp", group = "TeleOp")
+public class MainTeleOp extends SafeOpMode {
+
+    private SafeDevice<DcMotorEx> frontLeft;
+    private SafeDevice<DcMotorEx> frontRight;
+    private SafeDevice<DcMotorEx> backLeft;
+    private SafeDevice<DcMotorEx> backRight;
+
+    @Override
+    protected void onSafeInit() {
+        frontLeft = safeMap.device(DcMotorEx.class, "frontLeft");
+        frontRight = safeMap.device(DcMotorEx.class, "frontRight");
+        backLeft = safeMap.device(DcMotorEx.class, "backLeft");
+        backRight = safeMap.device(DcMotorEx.class, "backRight");
+
+        GamepadAdaptor.attach(orchestrator, gamepad1, "g1");
+
+        orchestrator.registerNode("drive",
+                new Drive(orchestrator, frontLeft, frontRight, backLeft, backRight));
     }
 
-    @SubscribedTo("drive/target")
-    void onTarget(TargetPose t) {
-        // hardware-thread work uses HardwareActions or @OnHardwareThread.
+    @Override
+    protected void onSafeLoop() {
+        telemetry.addData("FL", "%.2f", orchestrator.getLatestValue("drive/power/fl", Double.class).orElse(0.0));
+        telemetry.addData("FR", "%.2f", orchestrator.getLatestValue("drive/power/fr", Double.class).orElse(0.0));
+        telemetry.addData("BL", "%.2f", orchestrator.getLatestValue("drive/power/bl", Double.class).orElse(0.0));
+        telemetry.addData("BR", "%.2f", orchestrator.getLatestValue("drive/power/br", Double.class).orElse(0.0));
+        telemetry.update();
     }
 }
-
-// In the OpMode's onSafeInit():
-// orchestrator.registerNode("drive", new DriveNode(orchestrator, left, right));
 ```
+
+Inside a node, the inherited field is `orchestrator` (never construct the bus yourself, never reference `hardwareMap` from a node — devices come in via the constructor).
+
+---
+
+## Silent behaviors the orchestrator applies
+
+These happen without exceptions; know them or they will cost you a practice session:
+
+| Trigger | What happens |
+| --- | --- |
+| `registerNode` with an already-used name | No-op — returns the prior node, logs a WARN. Second subsystem silently does nothing. |
+| `@RunPeriodically` with `hz <= 0` | Logs a warning, loop never scheduled. |
+| First `publish` to an unknown topic | Creates the topic from the value's runtime type — locks the type. |
+| Publish a wrong-typed value to an existing topic | Throws `IllegalArgumentException` **on the publishing thread** — including the hardware thread. |
+| Publish `null` | Throws `IllegalArgumentException`. |
+| Publish after `close()` | Ignored with a warning. |
+| `@SubscribedTo` param type doesn't match the message | **Silently dropped** — handler never runs, nothing logged. |
+| Callback queue (256) full | Handler runs on the **publisher's** thread (`CallerRunsPolicy`) — a saturated bus degrades isolation instead of dropping work. |
+| Exception in a subscriber / loop / action | Logged through the orchestrator sink; execution continues. |
+| `@RunPeriodically` timing | Fixed delay: next run starts `1000/hz` ms after the previous *finishes* — effective rate ≤ `hz`; first run fires immediately at registration. |
+| `@RunnableAction` duplicate name | First registration wins; second logs a warning and is skipped. |
+| `cancelAllActions()` | Permanently shuts the action pool — every later `runAction` completes exceptionally. |
+| `hardware.shutdown()` | Closes the **entire orchestrator**, despite the name. |
+| `SafeOpMode.stop()` | Calls `onSafeStop()` then `orchestrator.close()` — node `close()` hooks run, all workers shut down. |
 
 ## Common mistakes
 
-1. Calling `motor.setPower(...)` from `onSafeLoop()` → invalid-thread failure (the call runs on the OpMode thread, not the hardware thread). Use `hardware.run(...)` or `@OnHardwareThread`.
-2. Registering the node without a stable name → `Orchestrator.registerNode(String, Node)` requires both. Call it from the owning OpMode, e.g. `orchestrator.registerNode("drive", node)`. Constructor-side `registerNode(this)` does not compile.
-3. Using an `int` topic for a sensor that produces `double` → type mismatch at publish time.
-4. Re-creating an `Orchestrator` per `loop()` call → memory leak and thread churn.
+1. **Raw hardware call off-thread.** `motor.setPower(0.5)` in `onSafeLoop()`, a plain subscriber, or an action → race condition. Route it: `@OnHardwareThread`, `hardware.run(...)`, or `SafeDevice.run(...)`.
+2. **`device.call(...)` inside hardware-thread code** → guaranteed deadlock (rule 2).
+3. **`@SubscribedTo("x")` shorthand** → compile error. Use `topic = "x"`.
+4. **`@SubscribedTo(topic = "...")` with the wrong param type** → never fires (silent drop). Check the declared type against what the publisher actually publishes.
+5. **Axes fetched as `Double`** → always empty `Optional`. Fetch `Float.class`, map, invert.
+6. **Duplicate node or action names** → second one silently skipped (warning in Logcat).
+7. **Forgetting `hardware = true`** on a device-touching loop → runs on the scheduler pool where hardware access is forbidden.
+8. **Second `Orchestrator.create(...)` inside an OpMode** → duplicate pools, broken lifecycle. `SafeOpMode` owns the bus.
+
+---
 
 ## Reference files (load on demand)
 
-- `references/annotations.md` — full attribute table for each annotation.
-- `references/safety.md` — the four safety invariants and which tests prove each.
-- `references/recipes.md` — copy-paste recipes: mecanum, bulk reads, two-controller teleop.
-- `references/migration.md` — step-by-step raw-FTC → Synapse refactor.
+Load the relevant reference **before** writing code in that area — they contain the exact flag/semantics gotchas:
+
+- Writing or reviewing annotated methods → `references/annotations.md`
+- Anything about threading, deadlocks, or "what runs where" → `references/safety.md`
+- Copy-paste robot-validated OpModes (mecanum, intake, direction test) → `references/recipes.md`
+- Converting an existing raw OpMode → `references/migration.md`
+- Exact method signatures and sharp edges of every public type → `references/api-surface.md`
+
+## Quick API surface
+
+```text
+com.aaravlabs.synapse
+  Orchestrator        getOrCreateTopic / findTopic / publish / subscribe
+                      getLatestValue / registerNode / unregisterNode / findNode
+                      runAction / cancelAllActions / runPeriodically
+                      runOnHardwareThread / hardware() / log-warn-error / close
+  Node                base class; protected final Orchestrator orchestrator; close()
+  Topic<T>            name / type / latestValue / latestValueOr / latestPublishNanos
+  Subscription        unsubscribe()
+  LogSink             STDERR / SILENT
+
+com.aaravlabs.synapse.annotation
+  @SubscribedTo(topic = "...")                  repeatable; 0-1 params
+  @RunPeriodically(hz = 20, hardware = false)   repeatable; no params
+  @RunnableAction("name")                       not repeatable; no params, void
+  @OnHardwareThread                             modifier for @SubscribedTo
+
+com.aaravlabs.synapse.ftc
+  SafeOpMode         orchestrator / hardware / safeMap + 5 hooks
+  FtcOrchestrator    create() / create(sink)
+  HardwareActions    run / call / call(+timeout) / callAsync
+                     bulkRead / stopBulkRead / isHardwareThread
+                     assertNotHardwareThread / tick / shutdown(=closes ALL)
+  SafeDevice<T>      run / call / callAsync / raw()
+  SafeHardwareMap    device(Class, name) / raw()
+  GamepadAdaptor     attach(orch, gamepad, "g1") -> "GamepadAdaptor:g1"
+  BulkReader         read(HardwareView)     @FunctionalInterface
+  HardwareView       publish(topic, value) / getLatestValue(topic, type)
+```
+
+Version note: docs pin `0.3.1` only on the Install page; everywhere else say "the latest release" and link https://github.com/IamCoder18/synapse/releases.

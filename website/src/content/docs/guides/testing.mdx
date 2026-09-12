@@ -1,0 +1,81 @@
+---
+title: Testing
+description: How Synapse is tested, and how to verify your OpMode on the bench and the field.
+---
+
+# Testing
+
+Synapse's own correctness is covered by a JUnit 5 suite (51 tests) that runs in CI on every push, plus a soak suite and an R8-minified run. Your job is narrower: verify your OpModes on the bench before the field. This page covers both.
+
+## How the library is tested
+
+| Area | What's covered |
+| --- | --- |
+| Topics | creation, type conflicts, auto-creation, latest-value cache |
+| Subscriptions | delivery, unsubscription, type normalization |
+| Periodic loops | fixed-delay behavior, pool isolation |
+| Threading | two-pool isolation under load, callback backpressure |
+| Hardware thread | serial execution, ordering under load, thread assertions |
+| Actions | futures, completion, cancellation |
+| Soak | minutes-long concurrent publisher/subscriber churn |
+| Gamepad | the real SDK 11.2 `Gamepad` field set, edge detection, field auto-discovery |
+| SafeDevice / HardwareActions | routing, blocking reads, timeouts |
+
+Run it from the Synapse repo checkout:
+
+```bash
+./gradlew test
+```
+
+The suite runs against a decompiled SDK stub, so it verifies Synapse's logic without needing the full Android toolchain.
+
+## Verifying your OpMode
+
+Tests for *your* robot live in TeamCode, and the most valuable ones are the simplest — direct verification OpModes you drive by hand. The pattern that has worked on a real robot ([PR #3](https://github.com/ATAARobotics/23684-Canopy-Biobuzz/pull/3)):
+
+### 1. Direction test (bench, wheels up)
+
+Subscribe each motor to one button and spin them individually — see the [full listing](/docs/recipes/mecanum-drive#step-3-verify-motor-directions). Confirms wiring and `setDirection` choices in five minutes.
+
+### 2. OpMode smoke (bench)
+
+- The OpMode appears in the Driver Station list.
+- `onSafeInit()` completes without exceptions in Logcat.
+- Telemetry shows the values your nodes publish (`drive/power/fl`, `intake/power`, ...).
+- Gamepad inputs produce the expected topic values.
+
+### 3. Driving (bench, then floor)
+
+- Controls map as expected, with the right signs.
+- No `IllegalStateException` from the hardware-thread assertion — if one appears, see [Troubleshooting](/docs/guides/troubleshooting).
+
+### 4. Field checklist
+
+Before a match, the on-robot verification checklist used for the reference migration:
+
+- [ ] Subsystem powered and wired correctly
+- [ ] OpMode runs without errors on the driver station
+- [ ] Telemetry shows expected values
+- [ ] Motors/servos respond as expected
+- [ ] Controls mapped correctly
+- [ ] Tested driver station + robot on the bench **and** on the field
+
+## Programmatic testing of your nodes
+
+Because nodes are plain classes over topics, they are unit-testable on the JVM with `Orchestrator.create("test")`:
+
+```java
+Orchestrator orch = Orchestrator.create("test");
+Drive drive = new Drive(orch, fakeLeft, fakeRight, fakeBackLeft, fakeBackRight);
+orch.registerNode("drive", drive);
+
+orch.publish("g1/left_stick_y", -1.0f);
+// assert the node published the expected power to drive/power/fl
+```
+
+`LogSink.SILENT` keeps test output clean: `Orchestrator.create("test", LogSink.SILENT)`.
+
+## Next steps
+
+- [Troubleshooting](/docs/guides/troubleshooting) — when a verification step fails.
+- [First OpMode](/docs/get-started/first-opmode) — the starting point the tests protect.

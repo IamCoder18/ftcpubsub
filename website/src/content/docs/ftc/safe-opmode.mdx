@@ -1,32 +1,72 @@
 ---
 title: SafeOpMode
-description: Drop-in OpMode base class with hardware-thread safety.
+description: Drop-in OpMode base class that wires the orchestrator and enforces the hardware-thread rule.
 ---
 
 # SafeOpMode
 
+`SafeOpMode` extends the FTC SDK's `OpMode` and does three things: it creates the orchestrator (and a `HardwareActions` + `SafeHardwareMap`) at init, it maps the SDK lifecycle onto five overridable hooks, and it asserts on every `loop()` that the OpMode thread has not wandered onto the hardware thread.
+
 ```java
-@TeleOp(name = "Demo")
+@TeleOp(name = "Demo", group = "Test")
 public class Demo extends SafeOpMode {
-    @Override protected void onSafeInit() {
+
+    @Override
+    protected void onSafeInit() {
         SafeDevice<DcMotorEx> intake = safeMap.device(DcMotorEx.class, "intake");
+        orchestrator.registerNode("intake", new IntakeNode(orchestrator, intake));
+        GamepadAdaptor.attach(orchestrator, gamepad1, "g1");
     }
-    @Override protected void onSafeLoop() { telemetry.update(); }
+
+    @Override
+    protected void onSafeLoop() {
+        telemetry.addData("power", orchestrator.getLatestValue("intake/power", Double.class).orElse(0.0));
+        telemetry.update();
+    }
 }
 ```
 
-`SafeOpMode` extends `OpMode` and wires three things for you (`SafeOpMode.java:42-66`):
+## What init() gives you
 
-- `orchestrator` — the bus.
-- `hardware` — a `HardwareActions` facade.
-- `safeMap` — a `SafeHardwareMap` that produces `SafeDevice<T>` instances.
+| Field | Type | Purpose |
+| --- | --- | --- |
+| `orchestrator` | `Orchestrator` | the bus — created via `FtcOrchestrator.create()` |
+| `hardware` | `HardwareActions` | facade over the hardware thread |
+| `safeMap` | `SafeHardwareMap` | wraps `hardwareMap` so lookups return `SafeDevice`s |
 
-It also enforces that `loop()` never runs on the hardware thread (`hardware.assertNotHardwareThread()`).
+## Lifecycle hooks
 
-## Hooks
+| SDK method | Override | Required | Notes |
+| --- | --- | --- | --- |
+| `init()` | `onSafeInit()` | **yes** | Create devices, register nodes, attach gamepads. |
+| `init_loop()` | `onSafeInitLoop()` | no | Between init and start. |
+| `start()` | `onSafeStart()` | no | Fires once when Start is pressed. |
+| `loop()` | `onSafeLoop()` | no | Every iteration. Runs after the thread assertion + tick. |
+| `stop()` | `onSafeStop()` | no | Runs **before** the orchestrator is closed — your last chance to flush telemetry. |
 
-- `onSafeInit()` — required, set up nodes here.
-- `onSafeInitLoop()` — between init and start.
-- `onSafeLoop()` — every iteration after start.
-- `onSafeStart()` — when start fires.
-- `onSafeStop()` — before `orch.close()`.
+## What loop() does before your code
+
+```java
+@Override
+public void loop() {
+    hardware.assertNotHardwareThread();  // fail fast if the rule was broken
+    hardware.tick();
+    onSafeLoop();
+}
+```
+
+The assertion throws `IllegalStateException` if `loop()` somehow runs on the hardware thread — this catches configuration bugs immediately instead of corrupting the bus.
+
+If you need full control, override `loop()` yourself but call `super.loop()` to keep the assertion and tick.
+
+## Rules inside the hooks
+
+- **`onSafeInit`** runs on the OpMode thread. It may set up nodes and devices freely, because it runs before any hardware-thread work exists. Hardware writes here should go through `safeMap.device(...).run(...)` or `hardware.run(...)` — motor direction setup in a node's constructor is the usual pattern.
+- **`onSafeLoop`** must not touch hardware directly. It is for telemetry and anything cheap. Hardware work goes through the layers described in [Architecture](/docs/concepts/architecture).
+
+> **Telemetry reads topics, not devices.** `onSafeLoop()` pulls values with `orchestrator.getLatestValue(...)` — it never calls `motor.getCurrentPosition()`. That is the pattern that keeps the OpMode thread and the hardware thread from ever racing. The [mecanum recipe](/docs/recipes/mecanum-drive) shows it end to end.
+
+## Next steps
+
+- [HardwareActions](/docs/ftc/hardware-actions) — the `hardware` field in detail.
+- [SafeDevice](/docs/ftc/safe-device) — the devices you create from `safeMap`.

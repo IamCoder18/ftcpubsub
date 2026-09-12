@@ -1,19 +1,54 @@
 ---
 title: "@SubscribedTo"
-description: Bind a method to a topic.
+description: Bind a method to a topic — invoked for every value published to it.
 ---
 
 # @SubscribedTo
 
+`@SubscribedTo` binds a `Node` method to a topic. Every value published to the topic invokes the method, once per value, on the callback pool.
+
 ```java
 @SubscribedTo(topic = "intake/set/power")
-public void onSetPower(double power) { /* … */ }
+@OnHardwareThread
+public void onTarget(double power) {
+    intake.run(m -> m.setPower(power));
+}
 ```
 
-The method takes 0 or 1 parameters. With one parameter, its type must match the topic's type (primitive ↔ wrapper is auto-normalized). The annotation is `@Repeatable` — apply it multiple times to subscribe one method to several topics.
+## Attributes
 
-See `SubscribedTo.java` for the full reference.
+| Attribute | Type | Required | Meaning |
+| --- | --- | --- | --- |
+| `topic` | `String` | yes | topic name to subscribe to. There is no shorthand — `@SubscribedTo("x")` does not compile. |
 
-## What happens at runtime
+## Method signature rules
 
-`AnnotationBinder` walks the class, collects every `@SubscribedTo` method, and subscribes a reflection-based handler to the named topic. If `@OnHardwareThread` is also present on the method, the binder wraps the handler so dispatch happens on the hardware thread.
+- **0 or 1 parameters.** With one, the type must be the topic's type or a supertype of it (primitives and wrappers are normalized, so `double` binds to a `Double` topic).
+- **0 parameters** is valid — use it when only the *event* matters:
+
+```java
+@SubscribedTo(topic = "g1/a/rising")
+public void onAPress() { /* the value is always true here */ }
+```
+
+- A message whose runtime type does not match the parameter type is **silently dropped** — the method is not invoked and nothing is logged. This lets one method guard its own types, but it also means a typo'd parameter type just never fires.
+- The method may have any return type; the return value is ignored.
+- The annotation is **repeatable** — apply it several times to subscribe one method to multiple topics.
+
+## Runtime behavior
+
+- Bound at `registerNode` by scanning the class and its superclasses.
+- The handler runs on the **callback pool** (4–16 threads). Add [`@OnHardwareThread`](/docs/annotations/on-hardware-thread) to run it on the hardware thread instead — required if it touches hardware.
+- Exceptions thrown by the handler are logged and do not affect other subscribers or the publisher.
+- The subscription is cleaned up automatically when the node is unregistered or the orchestrator closes.
+
+> **Hot topics fire a lot.** Subscribing to `g1/a` (current state) fires every 16 ms while the adaptor polls. For button presses you usually want the `/rising` topic, which fires only on the press edge.
+
+## Programmatic equivalent
+
+Outside a node, `orchestrator.subscribe(name, type, handler)` provides the same delivery with a cancellable handle. See [Subscriptions](/docs/concepts/subscriptions).
+
+## Next steps
+
+- [`@OnHardwareThread`](/docs/annotations/on-hardware-thread) — if the handler touches hardware.
+- [Subscriptions](/docs/concepts/subscriptions) — choosing between the three consumption styles.

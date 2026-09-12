@@ -1,11 +1,13 @@
 ---
 title: FTC Integration
-description: SafeOpMode, HardwareActions, SafeDevice, GamepadAdaptor.
+description: SafeOpMode, HardwareActions, SafeDevice, SafeHardwareMap, GamepadAdaptor.
 ---
 
 # FTC Integration
 
-- **[SafeOpMode](/docs/ftc/safe-opmode)** — drop-in base class.
-- **[HardwareActions](/docs/ftc/hardware-actions)** — `run` / `call` / `callAsync` / `bulkRead`.
-- **[SafeDevice](/docs/ftc/safe-device)** — type-safe wrapper around any hardware object.
-- **[GamepadAdaptor](/docs/ftc/gamepad-adaptor)** — gamepad fields → topics.
+These are the types you touch in every OpMode. They are the glue between the FTC SDK lifecycle and the orchestrator.
+
+- **[SafeOpMode](/docs/ftc/safe-opmode)** — the base class. Creates the orchestrator, gives you five lifecycle hooks, and enforces the hardware-thread rule on every `loop()`.
+- **[HardwareActions](/docs/ftc/hardware-actions)** — the facade over the hardware thread: `run`, `call`, `callAsync`, `bulkRead`.
+- **[SafeDevice](/docs/ftc/safe-device)** — a typed wrapper that routes one device's calls through the hardware thread. Also covers `SafeHardwareMap`.
+- **[GamepadAdaptor](/docs/ftc/gamepad-adaptor)** — publishes every gamepad button and axis onto topics at 60 Hz.

@@ -5,7 +5,15 @@ description: Install Synapse and write your first OpMode in under five minutes.
 
 # Get Started
 
-This section gets you from `git clone` (or `gradle sync`) to a working `SafeOpMode`.
+Synapse gives FTC robot code a typed pub/sub bus and a single dedicated hardware thread. Everything you write is either a **topic** (a named channel carrying values), a **node** (a class with annotated callbacks), or an **OpMode** (extends `SafeOpMode`, wires everything together).
 
-- **[Install](/docs/get-started/install)** — Add the dependency, apply keep rules, and pick a build system.
-- **[First OpMode](/docs/get-started/first-opmode)** — A copy-paste `TeleOp` that drives a single motor from a gamepad axis.
+The fastest path from zero to a running robot:
+
+1. **[Install](/docs/get-started/install)** — add `com.aaravlabs:synapse:0.3.1` to your FTC project's `build.dependencies.gradle`.
+2. **[Write your first OpMode](/docs/get-started/first-opmode)** — a complete, copy-pasteable TeleOp that drives a motor from a stick.
+3. **[Build a full drivetrain](/docs/recipes/mecanum-drive)** — a robot-validated mecanum recipe with subsystem nodes.
+
+Once the basics click, the two pages worth reading in full are:
+
+- **[Architecture](/docs/concepts/architecture)** — how the four thread workers divide work, and why all hardware calls funnel through one thread. This is the single most important concept in the library.
+- **[SafeOpMode](/docs/ftc/safe-opmode)** — the base class you will extend in every OpMode, and the five hooks it gives you.

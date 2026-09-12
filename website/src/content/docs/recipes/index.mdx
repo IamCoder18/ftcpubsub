@@ -1,10 +1,19 @@
 ---
 title: Recipes
-description: Copy-paste solutions to common FTC problems.
+description: Copy-paste solutions tested on a real robot.
 ---
 
 # Recipes
 
-- **[Mecanum drive](/docs/recipes/mecanum-drive)** — Field-centric mecanum using four motors and two sticks.
-- **[Bulk read sensors](/docs/recipes/bulk-read-sensors)** — Use `bulkRead` to publish amps, position, velocity together.
-- **[Two-controller teleop](/docs/recipes/two-controller-teleop)** — One driver, one operator, two gamepads.
+Only recipes that have been **verified on a real robot** live here. Each page links the pull request where the code was tested, with the on-robot verification notes.
+
+- **[Mecanum drive](/docs/recipes/mecanum-drive)** — four-motor robot-centric drivetrain with per-wheel telemetry and a direction test. Verified on the 23684 Canopy-Biobuzz competition robot ([PR #3](https://github.com/ATAARobotics/23684-Canopy-Biobuzz/pull/3)).
+- **[Two-controller teleop](/docs/recipes/two-controller-teleop)** — driver + operator gamepads with a shared-input intake. Verified in the same PR.
+
+## Supported, recipe pending
+
+Everything below is **fully supported by the library today** — the APIs are stable and documented. What these patterns don't have yet is a recipe page, and recipes only appear here once they've been verified on a real robot. Use the linked APIs to build them now:
+
+- **Field-centric mecanum drive** — IMU lookup via [`safeMap.device(IMU.class, ...)`](/docs/ftc/safe-device), heading rotation before the mix.
+- **Bulk sensor reads** — [`bulkRead`](/docs/ftc/hardware-actions) for motors, encoders, and current.
+- **Autonomous skeleton** — state machine in a [`@RunPeriodically`](/docs/annotations/run-periodically) loop over topics.

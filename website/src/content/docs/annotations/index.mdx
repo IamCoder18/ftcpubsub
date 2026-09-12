@@ -1,11 +1,26 @@
 ---
 title: Annotations
-description: The four annotations Synapse ships.
+description: The four annotations Synapse ships, and the rules each one enforces.
 ---
 
 # Annotations
 
-- **[@SubscribedTo](/docs/annotations/subscribed-to)** — react to a topic.
-- **[@RunPeriodically](/docs/annotations/run-periodically)** — fire on a fixed-rate loop.
-- **[@RunnableAction](/docs/annotations/runnable-action)** — register a named, fire-on-demand action.
-- **[@OnHardwareThread](/docs/annotations/on-hardware-thread)** — reroute a callback onto the single hardware thread.
+Four annotations drive everything. All are runtime annotations on methods of a `Node` subclass, bound when the node is registered with `orchestrator.registerNode(name, node)`.
+
+| Annotation | Repeatable | Method signature | Binds to |
+| --- | --- | --- | --- |
+| [`@SubscribedTo`](/docs/annotations/subscribed-to) | yes | 0 or 1 parameter, any return | topic subscription (callback pool) |
+| [`@RunPeriodically`](/docs/annotations/run-periodically) | yes | no parameters, any body | scheduler pool (or hardware thread) |
+| [`@RunnableAction`](/docs/annotations/runnable-action) | no | no parameters, returns `void` | action pool, fired by name |
+| [`@OnHardwareThread`](/docs/annotations/on-hardware-thread) | no | — (modifier on `@SubscribedTo` methods) | re-routes the subscriber to the hardware thread |
+
+## Rules that apply to all four
+
+- **Write the full attribute.** `@SubscribedTo(topic = "...")`, not `@SubscribedTo("...")` — the annotation has no shorthand value. `@RunnableAction("name")` is the exception; its only attribute is the value.
+- **Methods must not be static.** The binder invokes them reflectively on the node instance.
+- **Errors in bound methods never crash the robot.** They are logged through the orchestrator's sink and the next invocation proceeds.
+- **Structural violations throw at `registerNode` time**, not at runtime — a wrong parameter count or return type fails the OpMode during init, where it is visible on the Driver Station.
+
+## Next steps
+
+Each annotation's page covers its attributes, runtime behavior, and gotchas.

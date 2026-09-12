@@ -38,11 +38,23 @@ dependencies {
     implementation("com.aaravlabs:synapse:0.3.1")
 }`;
 
-const maven = `<repositories>
-    <repository>
-        <id>github-synapse</id>
-        <url>https://maven.pkg.github.com/IamCoder18/synapse</url>
-    </repository>
+const maven = `<!-- ~/.m2/settings.xml -->
+<settings>
+  <servers>
+    <server>
+      <id>github-synapse</id>
+      <username>env.GITHUB_USER</username>
+      <password>env.GITHUB_TOKEN</password>
+    </server>
+  </servers>
+</settings>
+
+<!-- your pom.xml -->
+<repositories>
+  <repository>
+    <id>github-synapse</id>
+    <url>https://maven.pkg.github.com/IamCoder18/synapse</url>
+  </repository>
 </repositories>
 
 <dependency>
@@ -50,7 +62,9 @@ const maven = `<repositories>
     <artifactId>synapse</artifactId>
     <version>0.3.1</version>
 </dependency>`;
-
+const gradleProps = `# ~/.gradle/gradle.properties (never commit)
+githubUser=<your-github-username>
+githubToken=<a-token-with-read:packages>`;
 const proguard = `# Already in the JAR. R8 keeps everything you need.
 -keep class com.aaravlabs.synapse.** { *; }
 -keep @com.aaravlabs.synapse.annotation.* class *`;
@@ -62,8 +76,8 @@ import com.aaravlabs.synapse.ftc.SafeOpMode;
 @TeleOp(name = "MyFirstOpMode", group = "Synapse")
 public class MyFirstOpMode extends SafeOpMode {
     @Override protected void onSafeInit() {
-        // You now have: orch, hardware, safeMap ready.
-        GamepadAdaptor.attach(orch, gamepad1, "g1");
+        // You now have: orchestrator, hardware, safeMap ready.
+        GamepadAdaptor.attach(orchestrator, gamepad1, "g1");
     }
     @Override protected void onSafeLoop() {
         telemetry.update();
@@ -78,11 +92,25 @@ public class MyFirstOpMode extends SafeOpMode {
   <main class="install">
     <header class="install__hero">
       <h1>Install Synapse</h1>
-      <p>Three tabs, three minutes, one Gradle file.</p>
+      <p>Token, dependency, one base class. Three minutes.</p>
+      <p class="install__hint">
+        Hosted on GitHub Packages — Maven Central publishing is planned for the next release.
+        Full details and troubleshooting: <a href="/docs/get-started/install">the Install guide</a>.
+      </p>
     </header>
 
     <section class="install__step">
-      <h2>1. Add the dependency</h2>
+      <h2>1. Configure a GitHub token</h2>
+      <p class="install__hint">
+        GitHub Packages requires authentication even for public packages, so Gradle needs a
+        personal access token with the <code>read:packages</code> scope in
+        <code>~/.gradle/gradle.properties</code>:
+      </p>
+      <pre><code>{gradleProps}</code></pre>
+    </section>
+
+    <section class="install__step">
+      <h2>2. Add the repository and dependency</h2>
       <p class="install__hint">Pick your build system. The Maven coordinates are the same either way.</p>
       <div class="install__tabs">
         <details open>
@@ -101,7 +129,7 @@ public class MyFirstOpMode extends SafeOpMode {
     </section>
 
     <section class="install__step">
-      <h2>2. R8 / ProGuard keep rules</h2>
+      <h2>3. R8 / ProGuard keep rules</h2>
       <p class="install__hint">
         Synapse already ships keep rules in <code>META-INF/proguard/synapse.pro</code>, so minification
         is safe out of the box. You don't need to copy anything — but if you use a custom rules file,
@@ -111,7 +139,7 @@ public class MyFirstOpMode extends SafeOpMode {
     </section>
 
     <section class="install__step">
-      <h2>3. Extend SafeOpMode</h2>
+      <h2>4. Extend SafeOpMode</h2>
       <p class="install__hint">
         Replace <code>extends OpMode</code> with <code>extends SafeOpMode</code> in your OpMode class.
         The base class wires the orchestrator, hardware thread, and a SafeHardwareMap for you.
@@ -120,7 +148,7 @@ public class MyFirstOpMode extends SafeOpMode {
     </section>
 
     <section class="install__step">
-      <h2>4. Verify it works</h2>
+      <h2>5. Verify it works</h2>
       <p class="install__hint">
         Build and run the OpMode above. You should see no errors in logcat and the standard "INIT" →
         "RUN" → "STOP" lifecycle messages from the FTC SDK. If you also see lines like
@@ -129,11 +157,11 @@ public class MyFirstOpMode extends SafeOpMode {
     </section>
 
     <section class="install__step">
-      <h2>5. Optional: enable GamepadAdaptor</h2>
+      <h2>6. Optional: enable GamepadAdaptor</h2>
       <p class="install__hint">
         Add this single line inside <code>onSafeInit()</code> to publish every gamepad field as a topic:
       </p>
-      <pre><code>GamepadAdaptor.attach(orch, gamepad1, "g1");</code></pre>
+      <pre><code>GamepadAdaptor.attach(orchestrator, gamepad1, "g1");</code></pre>
       <p class="install__hint">
         See <a href="/docs/ftc/gamepad-adaptor">GamepadAdaptor</a> for the full topic map.
       </p>

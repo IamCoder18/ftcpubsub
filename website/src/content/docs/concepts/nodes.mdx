@@ -1,32 +1,66 @@
 ---
 title: Nodes
-description: Independent units of code with annotated callbacks.
+description: Independent units of robot logic with annotated callbacks.
 ---
 
 # Nodes
 
-A `Node` is the home for `@SubscribedTo`, `@RunPeriodically`, and `@RunnableAction` methods. Subclass `Node` and pass the orchestrator to `super(orch)`:
+A `Node` is one concern of the robot — drive, intake, shooter, telemetry — as a class with annotated methods. Nodes never reference each other; they communicate entirely through topics. This is what makes subsystems swappable and testable.
 
 ```java
 public class IntakeNode extends Node {
-    public IntakeNode(Orchestrator orch) {
+    private final SafeDevice<DcMotorEx> intake;
+    private double targetPower;
+
+    public IntakeNode(Orchestrator orch, SafeDevice<DcMotorEx> intake) {
         super(orch);
+        this.intake = intake;
     }
 
     @SubscribedTo(topic = "intake/set/power")
     @OnHardwareThread
-    public void onPower(double power) { /* … */ }
+    public void onTarget(double power) {
+        targetPower = power;
+        intake.run(m -> m.setPower(power));
+    }
+
+    @RunPeriodically(hz = 10)
+    public void publishState() {
+        orchestrator.publish("intake/power", targetPower);
+    }
 }
 ```
 
-Then register it:
+Register it from your OpMode's `onSafeInit()`:
 
 ```java
-orchestrator.registerNode("intake", new IntakeNode(orchestrator));
+orchestrator.registerNode("intake", new IntakeNode(orchestrator, intake));
 ```
 
-`registerNode` runs the annotation binder, which scans for `@SubscribedTo`, `@RunPeriodically`, and `@RunnableAction` methods and wires them up. See `OrchestratorImpl.java:308-326` and `Node.java:40-57`.
+## What registration does
 
-## Lifecycle
+`registerNode(name, node)` scans the node's class **and its superclasses** and wires up:
 
-`Node.close()` is a hook for releasing resources. `Orchestrator.close()` calls it on every node after unregistering it (`OrchestratorImpl.java:511-517`).
+- every `@SubscribedTo` method → a subscription to that topic (on the callback pool, or the hardware thread with `@OnHardwareThread`),
+- every `@RunPeriodically` method → a scheduled loop (scheduler pool, or hardware thread with `hardware = true`),
+- every `@RunnableAction` method → a named, fire-on-demand action.
+
+Binding happens once, at registration. Problems are caught here, not at runtime: a method with two parameters, a static annotated method, or a non-void action throws `IllegalArgumentException` at `registerNode` time.
+
+> **Names are unique.** Registering a second node under an existing name does nothing and logs a warning. If a subsystem inexplicably does nothing, look for a duplicate name first.
+
+## Writing a good node
+
+- **One concern per node.** `Drive`, `Intake`, `Elevator` — not `EverythingNode`. The registration name should be the subsystem name.
+- **Take devices in via the constructor** as `SafeDevice<T>` parameters; never call `hardwareMap` inside a node.
+- **Publish your state.** A node that drives motors should also publish the powers it is commanding (`drive/power/fl`) so telemetry and logging can render them without touching hardware. See the [mecanum recipe](/docs/recipes/mecanum-drive).
+- **Nodes are not singletons.** Two OpModes can register different sets of nodes; the bus is created fresh per OpMode run.
+
+## Lifecycle and cleanup
+
+`Node.close()` is called when the node is unregistered — by `unregisterNode("name")` or by `orchestrator.close()` at OpMode stop. The binder already cancels the node's scheduled loops and unsubscribes its callbacks; override `close()` only to release your own resources (file handles, embedded sensors' own threads, and so on).
+
+## Next steps
+
+- [Subscriptions](/docs/concepts/subscriptions) — the three ways a node receives values.
+- [Mecanum drive](/docs/recipes/mecanum-drive) — a complete robot-validated node.
