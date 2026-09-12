@@ -10,7 +10,7 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
  *
  * <ul>
  *   <li>Orchestrator lifecycle: created on {@code init()}, shut down on
- *       {@code stop()}.</li>
+ *       {@code stop()} after {@link #onSafeStop()}.</li>
  *   <li>A {@link HardwareActions} instance ready to use as {@code hardware}.</li>
  *   <li>A {@link SafeHardwareMap} that wraps {@code hardwareMap} so device
  *       method calls route through the hardware thread.</li>
@@ -25,30 +25,56 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
  * @TeleOp(name = "My OpMode")
  * public class MyOpMode extends SafeOpMode {
  *     @Override protected void onSafeInit() {
- *         // hardwareMap, hardware, orch, safeMap are all initialized for you.
+ *         // hardwareMap, hardware, orchestrator, safeMap are all initialized for you.
  *         SafeDevice<DcMotorEx> intake = safeMap.device(DcMotorEx.class, "intake");
- *         orch.registerNode("intake", new IntakeNode(orch, intake));
+ *         orchestrator.registerNode("intake", new IntakeNode(orchestrator, intake));
  *     }
  *
  *     @Override protected void onSafeLoop() {
  *         // Default loop body. You may also override loop() yourself if you
  *         // need full control, but then call super.loop() to get the
  *         // thread assertion + tick.
- *         orch.publish("tick", System.nanoTime());
+ *         orchestrator.publish("tick", System.nanoTime());
  *     }
  * }
  * }</pre>
+ *
+ * <p>Lifecycle mapping (SDK method → your hook):
+ *
+ * <table border="1">
+ *   <caption>Lifecycle hooks</caption>
+ *   <tr><th>SDK method</th><th>Your hook</th><th>Notes</th></tr>
+ *   <tr><td>{@code init()}</td><td>{@link #onSafeInit()}</td><td>Required. Orchestrator is created first.</td></tr>
+ *   <tr><td>{@code init_loop()}</td><td>{@link #onSafeInitLoop()}</td><td>Between init and start.</td></tr>
+ *   <tr><td>{@code start()}</td><td>{@link #onSafeStart()}</td><td>When Start is pressed.</td></tr>
+ *   <tr><td>{@code loop()}</td><td>{@link #onSafeLoop()}</td><td>Thread assertion + tick run first.</td></tr>
+ *   <tr><td>{@code stop()}</td><td>{@link #onSafeStop()}</td><td>Runs before the orchestrator is closed.</td></tr>
+ * </table>
  */
 public abstract class SafeOpMode extends OpMode {
 
+    /** The pub/sub bus, created in {@code init()} and closed in {@code stop()}. */
+    protected Orchestrator orchestrator;
+
+    /**
+     * @deprecated use {@link #orchestrator}. Retained as a deprecated alias so
+     *             existing FTC team code that still references {@code this.orch}
+     *             keeps compiling with a deprecation warning.
+     */
+    @Deprecated
     protected Orchestrator orch;
+
+    /** Facade over the dedicated hardware thread. See {@link HardwareActions}. */
     protected HardwareActions hardware;
+
+    /** Wraps {@code hardwareMap} so device lookups return {@link SafeDevice}s. */
     protected SafeHardwareMap safeMap;
 
     @Override
     public final void init() {
-        orch = FtcOrchestrator.create();
-        hardware = orch.hardware();
+        orchestrator = FtcOrchestrator.create();
+        orch = orchestrator;
+        hardware = orchestrator.hardware();
         safeMap = new SafeHardwareMap(hardwareMap, hardware);
         onSafeInit();
     }
@@ -73,7 +99,7 @@ public abstract class SafeOpMode extends OpMode {
     @Override
     public void stop() {
         onSafeStop();
-        orch.close();
+        orchestrator.close();
     }
 
     // ---- user-overridable hooks ----------------------------------------

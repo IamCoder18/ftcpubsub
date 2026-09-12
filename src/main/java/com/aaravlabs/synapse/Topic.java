@@ -27,20 +27,34 @@ public final class Topic<T> {
         this.type = type;
     }
 
+    /**
+     * @return the topic name
+     */
     public String name() {
         return name;
     }
 
+    /**
+     * @return the topic's message type
+     */
     public Class<T> type() {
         return type;
     }
 
-    /** The most recently published value, or empty if nothing has been published yet. */
+    /**
+     * The most recently published value, or empty if nothing has been published yet.
+     *
+     * @return an {@link Optional} holding the latest value
+     */
     public synchronized Optional<T> latestValue() {
         return Optional.ofNullable(latest);
     }
 
-    /** Wall-clock nanos at which {@link #latest} was last updated. */
+    /**
+     * Wall-clock nanos at which {@link #latestValue()} was last updated.
+     *
+     * @return publish timestamp in nanoseconds ({@code System.nanoTime()} clock)
+     */
     public synchronized long latestPublishNanos() {
         return latestPublishNanos;
     }
@@ -48,6 +62,8 @@ public final class Topic<T> {
     /**
      * Record a new latest value. Called by the orchestrator immediately before notifying
      * subscribers.
+     *
+     * @param value the value to record
      */
     synchronized void recordLatest(T value) {
         this.latest = value;
@@ -57,6 +73,9 @@ public final class Topic<T> {
     /**
      * Returns the most recent value, falling back to {@code defaultValue} if nothing has
      * been published yet. Convenience for {@code topic.latestValue().orElse(default)}.
+     *
+     * @param defaultValue the value to return before the first publish
+     * @return the latest value, or {@code defaultValue}
      */
     public T latestValueOr(T defaultValue) {
         T v = latest;

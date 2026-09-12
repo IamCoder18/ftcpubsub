@@ -15,27 +15,35 @@ import java.util.Set;
  * topic {@code "gamepad1"}, the following topics are populated:
  *
  * <ul>
- *   <li>{@code gamepad1/<button>} — the current state of each boolean field (e.g.
- *       {@code a}, {@code right_bumper}, {@code dpad_up}).</li>
+ *   <li>{@code gamepad1/<button>} — the current state of each boolean field, published
+ *       every poll (e.g. {@code a}, {@code right_bumper}, {@code dpad_up}).</li>
  *   <li>{@code gamepad1/<button>/rising} — fires (with value {@code true}) on a
- *       0→1 transition.</li>
- *   <li>{@code gamepad1/<button>/falling} — fires on a 1→0 transition.</li>
+ *       0→1 transition only.</li>
+ *   <li>{@code gamepad1/<button>/falling} — fires (with value {@code true}) on a
+ *       1→0 transition only.</li>
  *   <li>{@code gamepad1/<axis>} — the current value of each float field (e.g.
  *       {@code left_stick_x}, {@code right_trigger}).</li>
  * </ul>
  *
- * <p>The parent topic is created implicitly on first publish. Polling is at
- * {@link #HZ} hertz; axes and buttons share the same loop for simplicity.
+ * <p>Every public non-static {@code boolean} field becomes a button topic and every
+ * public non-static {@code float} field becomes an axis topic — including fields the
+ * SDK adds in future releases. Non-boolean/float fields ({@code id},
+ * {@code timestamp}, {@code nextRumbleApproxFinishTime}) are skipped.
+ *
+ * <p>All topics are pre-created when the adaptor is attached, so you can subscribe
+ * before the first tick. Polling runs at {@link #HZ} (60 Hz) on the scheduler pool —
+ * gamepad reads never need the hardware thread.
  *
  * <p>Usage:
  * <pre>{@code
- * GamepadAdaptor.attach(orch, gamepad1, "gamepad1");
+ * GamepadAdaptor.attach(orchestrator, gamepad1, "gamepad1");
  *
  * // Anywhere:
- * orch.subscribe("gamepad1/right_bumper/rising", Boolean.class, _ -> {
- *     orch.publish("intake/set/power", 1.0);
+ * orchestrator.subscribe("gamepad1/right_bumper/rising", Boolean.class, _ -> {
+ *     orchestrator.publish("intake/set/power", 1.0);
  * });
- * }</pre>
+ * }
+ * </pre>
  */
 public final class GamepadAdaptor extends Node {
 
@@ -89,7 +97,15 @@ public final class GamepadAdaptor extends Node {
 
     /**
      * Attach an adaptor that polls {@code gamepad} and dispatches its state onto
-     * {@code parentTopic}. Returns the registered node name.
+     * {@code parentTopic}. The adaptor is registered as a node named
+     * {@code GamepadAdaptor:<parentTopic>} so it is cleaned up automatically when
+     * the orchestrator closes.
+     *
+     * @param orch the orchestrator to publish to
+     * @param gamepad the SDK {@code Gamepad} instance to reflect (usually
+     *                {@code gamepad1} or {@code gamepad2})
+     * @param parentTopic prefix for all published topics, e.g. {@code "g1"}
+     * @return the registered node name ({@code "GamepadAdaptor:<parentTopic>"})
      */
     public static String attach(Orchestrator orch, Object gamepad, String parentTopic) {
         String name = "GamepadAdaptor:" + parentTopic;
@@ -98,6 +114,10 @@ public final class GamepadAdaptor extends Node {
         return name;
     }
 
+    /**
+     * Poll the gamepad once and publish any changed state. Registered internally as
+     * a 60 Hz loop; you never call this yourself.
+     */
     @RunPeriodically(hz = HZ)
     public void poll() {
         if (!gamepadResolved) return;

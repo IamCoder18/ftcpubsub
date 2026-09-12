@@ -6,12 +6,37 @@ package com.aaravlabs.synapse;
  */
 public interface LogSink {
 
+    /**
+     * Log an informational message.
+     *
+     * @param tag short label identifying the source (usually the orchestrator name)
+     * @param message the message
+     */
     void info(String tag, String message);
 
+    /**
+     * Log a warning.
+     *
+     * @param tag short label identifying the source
+     * @param message the message
+     */
     void warn(String tag, String message);
 
+    /**
+     * Log an error.
+     *
+     * @param tag short label identifying the source
+     * @param message the message
+     */
     void error(String tag, String message);
 
+    /**
+     * Log an error with a stack trace.
+     *
+     * @param tag short label identifying the source
+     * @param message the message
+     * @param t the throwable whose stack trace should be printed
+     */
     void error(String tag, String message, Throwable t);
 
     /** A sink that writes everything to {@code System.err}. Useful for tests. */

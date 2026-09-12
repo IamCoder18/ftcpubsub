@@ -24,5 +24,11 @@ import java.util.function.Consumer;
  */
 @FunctionalInterface
 public interface BulkReader {
+
+    /**
+     * Read hardware state and publish it. Runs on the hardware thread.
+     *
+     * @param view used to publish readings onto the bus
+     */
     void read(HardwareView view);
 }
